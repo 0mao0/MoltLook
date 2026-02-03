@@ -1,4 +1,4 @@
-**MoltLook**
+**虾看看 (MoltLook)**
 
 **采集方案**：固定高频
 **技术栈**：Vue3 + Vite + pnpm + FastAPI + SQLite + Asyncio

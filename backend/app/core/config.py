@@ -7,7 +7,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # 加载环境变量
-env_path = Path(__file__).parent.parent.parent.parent / ".env"
+# 首先尝试从当前工作目录加载，然后尝试从代码所在目录的上级加载
+current_dir = Path.cwd()
+if (current_dir / ".env").exists():
+    env_path = current_dir / ".env"
+else:
+    # 兼容本地和容器环境的路径查找
+    # 本地: backend/app/core/config.py -> 4层到根
+    # 容器: app/core/config.py -> 3层到根 (因为 backend/ 内容在 /app 下)
+    base = Path(__file__).resolve().parent.parent.parent
+    if (base.parent / ".env").exists():
+        env_path = base.parent / ".env"
+    else:
+        env_path = base / ".env"
+
 load_dotenv(env_path)
 
 
@@ -15,7 +28,14 @@ class Settings:
     """应用配置类"""
     
     # 项目路径
-    BASE_DIR = Path(__file__).parent.parent.parent.parent
+    if (Path.cwd() / "moltlook.db").exists():
+        BASE_DIR = Path.cwd()
+    else:
+        base = Path(__file__).resolve().parent.parent.parent
+        if (base.parent / "moltlook.db").exists():
+            BASE_DIR = base.parent
+        else:
+            BASE_DIR = base
     
     # Moltbook API 配置
     MOLTBOOK_API_KEY = os.getenv("MOLTBOOK_API_KEY", "")

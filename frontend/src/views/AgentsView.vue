@@ -2,32 +2,79 @@
   <div class="agents">
     <div v-if="isLoading && validAgents.length === 0" class="loading-container">
       <el-icon class="loading-spinner"><Loading /></el-icon>
-      <span>加载中...</span>
+      <span>{{ $t('common.loading') }}</span>
     </div>
 
     <template v-else>
       <div v-if="validAgents.length === 0" class="empty-container">
-        <el-empty description="暂无数据">
+        <el-empty :description="$t('common.noData')">
         </el-empty>
       </div>
 
       <template v-else>
-        <div class="risk-stats-grid">
-          <div class="risk-stat-card low" :class="{ active: riskFilter === 'low' }" @click="setRiskFilter('low')">
-            <div class="risk-count">{{ riskStats.low }}</div>
-            <div class="risk-label">低风险 ({{ riskStats.low }})</div>
+        <div class="stats-grid">
+          <div class="stat-card risk-card low" :class="{ active: riskFilter === 'low' }" @click="setRiskFilter('low')">
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon green">
+                <el-icon size="32"><CircleCheck /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ $t('risk.low') }}</span>
+                <span class="stat-value">{{ riskStats.low }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: #10b981;"></div>
+            </div>
           </div>
-          <div class="risk-stat-card medium" :class="{ active: riskFilter === 'medium' }" @click="setRiskFilter('medium')">
-            <div class="risk-count">{{ riskStats.medium }}</div>
-            <div class="risk-label">中风险 ({{ riskStats.medium }})</div>
+
+          <div class="stat-card risk-card medium" :class="{ active: riskFilter === 'medium' }" @click="setRiskFilter('medium')">
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon orange">
+                <el-icon size="32"><Warning /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ $t('risk.medium') }}</span>
+                <span class="stat-value">{{ riskStats.medium }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: #f59e0b;"></div>
+            </div>
           </div>
-          <div class="risk-stat-card high" :class="{ active: riskFilter === 'high' }" @click="setRiskFilter('high')">
-            <div class="risk-count">{{ riskStats.high }}</div>
-            <div class="risk-label">高风险 ({{ riskStats.high }})</div>
+
+          <div class="stat-card risk-card high" :class="{ active: riskFilter === 'high' }" @click="setRiskFilter('high')">
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon red">
+                <el-icon size="32"><CircleClose /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ $t('risk.high') }}</span>
+                <span class="stat-value">{{ riskStats.high }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: #ef4444;"></div>
+            </div>
           </div>
-          <div class="risk-stat-card critical" :class="{ active: riskFilter === 'critical' }" @click="setRiskFilter('critical')">
-            <div class="risk-count">{{ riskStats.critical }}</div>
-            <div class="risk-label">极高风险 ({{ riskStats.critical }})</div>
+
+          <div class="stat-card risk-card critical" :class="{ active: riskFilter === 'critical' }" @click="setRiskFilter('critical')">
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon purple">
+                <el-icon size="32"><WarningFilled /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ $t('risk.critical') }}</span>
+                <span class="stat-value">{{ riskStats.critical }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: #7c3aed;"></div>
+            </div>
           </div>
         </div>
 
@@ -35,18 +82,18 @@
           <div class="table-header">
             <div class="table-title">
               <el-icon><User /></el-icon>
-              <span>Agent 列表</span>
+              <span>{{ $t('agents.title') }}</span>
             </div>
           </div>
           
           <div class="agent-table">
             <div class="table-header-row">
-              <div class="table-cell name-cell">Agent 名称</div>
-              <div class="table-cell risk-cell">风险等级</div>
-              <div class="table-cell score-cell">阴谋指数</div>
-              <div class="table-cell count-cell">发帖数</div>
-              <div class="table-cell time-cell">最后活跃</div>
-              <div class="table-cell action-cell">操作</div>
+              <div class="table-cell name-cell">{{ $t('common.agent') }}</div>
+              <div class="table-cell risk-cell">{{ $t('common.riskLevel') }}</div>
+              <div class="table-cell score-cell">{{ $t('common.score') }}</div>
+              <div class="table-cell count-cell">{{ $t('common.posts') }}</div>
+              <div class="table-cell time-cell">{{ $t('common.lastActive') }}</div>
+              <div class="table-cell action-cell">{{ $t('common.details') }}</div>
             </div>
             
             <div 
@@ -77,7 +124,7 @@
               <div class="table-cell time-cell">{{ formatTime(agent.last_active) }}</div>
               <div class="table-cell action-cell">
                 <button type="button" class="action-link" @click="viewAgentDetail(agent)">
-                  详情
+                  {{ $t('common.details') }}
                 </button>
               </div>
             </div>
@@ -89,7 +136,7 @@
 
   <el-dialog
     v-model="detailDialogVisible"
-    title="Agent 详情"
+    :title="$t('agents.detailTitle')"
     width="720px"
     destroy-on-close
   >
@@ -109,45 +156,45 @@
       
       <div class="detail-card">
         <el-descriptions :column="2" border class="detail-stats">
-          <el-descriptions-item label="风险等级">
+          <el-descriptions-item :label="$t('common.riskLevel')">
             <el-tag :type="getRiskType(selectedAgent.risk_level)" effect="dark">
               {{ getRiskLabel(selectedAgent.risk_level) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="平均阴谋指数">
+          <el-descriptions-item :label="$t('dashboard.avgConspiracy')">
             {{ (selectedAgent.avg_conspiracy_7d || 0).toFixed(1) }}/10
           </el-descriptions-item>
-          <el-descriptions-item label="发帖数">
+          <el-descriptions-item :label="$t('common.posts')">
             {{ selectedAgent.post_count || 0 }}
           </el-descriptions-item>
-          <el-descriptions-item label="回复数">
+          <el-descriptions-item :label="$t('common.replies')">
             {{ selectedAgent.reply_count || 0 }}
           </el-descriptions-item>
-          <el-descriptions-item label="被回复数">
+          <el-descriptions-item :label="$t('common.beReplied')">
             {{ selectedAgent.be_replied_count || 0 }}
           </el-descriptions-item>
-          <el-descriptions-item label="社区">
+          <el-descriptions-item :label="$t('common.community')">
             {{ selectedAgent.community_id ?? '-' }}
           </el-descriptions-item>
-          <el-descriptions-item label="首次出现">
+          <el-descriptions-item :label="$t('common.firstSeen')">
             {{ formatTime(selectedAgent.first_seen) }}
           </el-descriptions-item>
-          <el-descriptions-item label="最后活跃">
+          <el-descriptions-item :label="$t('common.lastActive')">
             {{ formatTime(selectedAgent.last_active) }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
 
       <div v-if="selectedAgent.description" class="detail-card detail-section">
-        <div class="section-title">描述</div>
+        <div class="section-title">{{ $t('common.description') }}</div>
         <div class="section-content">{{ selectedAgent.description }}</div>
       </div>
 
       <div class="detail-card detail-section">
         <div class="section-title">
-          最近发言
+          {{ $t('common.recentPosts') }}
           <el-tag v-if="highRiskPosts.length" type="danger" size="small" effect="dark" style="margin-left: 8px">
-            {{ highRiskPosts.length }} 条高风险
+            {{ $t('agents.highRiskCount', { count: highRiskPosts.length }) }}
           </el-tag>
         </div>
         <div v-if="selectedAgent.recent_posts && selectedAgent.recent_posts.length" class="recent-posts">
@@ -165,24 +212,24 @@
                   {{ getRiskLabel(getPostRiskLevel(post)) }}
                 </span>
                 <span class="post-item-badge score">
-                  阴谋指数 {{ (post.conspiracy_score || 0).toFixed(1) }}
+                  {{ $t('common.score') }} {{ (post.conspiracy_score || 0).toFixed(1) }}
                 </span>
               </div>
             </div>
           </div>
         </div>
-        <div v-else class="empty-detail">暂无发言记录</div>
+        <div v-else class="empty-detail">{{ $t('agents.noPosts') }}</div>
       </div>
 
       <div class="detail-card detail-section">
-        <div class="section-title">互动对象</div>
+        <div class="section-title">{{ $t('common.connections') }}</div>
         <div v-if="selectedAgent.connections?.length" class="connections">
           <div v-for="item in selectedAgent.connections" :key="item.agent_id" class="connection-item">
             <span class="connection-name">{{ item.agent_id }}</span>
             <span class="connection-count">{{ item.count }}</span>
           </div>
         </div>
-        <div v-else class="empty-detail">暂无记录</div>
+        <div v-else class="empty-detail">{{ $t('agents.noConnections') }}</div>
       </div>
     </div>
   </el-dialog>
@@ -190,14 +237,30 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { User, Loading } from '@element-plus/icons-vue'
+import { 
+  User, 
+  Loading, 
+  Refresh, 
+  CircleCheck, 
+  Warning, 
+  CircleClose, 
+  WarningFilled 
+} from '@element-plus/icons-vue'
 import { useDataStore } from '@/stores/data'
+import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
-import { agentsApi, dashboardApi } from '@/api'
+import { useI18n } from 'vue-i18n'
+import { agentsApi } from '@/api'
+import { riskLabels } from '@/locales'
 
+const { t } = useI18n()
+const languageStore = useLanguageStore()
 const store = useDataStore()
 const { agents, isLoading } = storeToRefs(store)
 
+/**
+ * 过滤有效的 Agent 列表
+ */
 const validAgents = computed(() => {
   if (!Array.isArray(agents.value)) return []
   return agents.value.filter(agent => 
@@ -213,6 +276,10 @@ const selectedAgent = ref<any>(null)
 const detailLoading = ref(false)
 const riskFilter = ref('')
 let refreshInterval: number | undefined
+
+/**
+ * 根据风险等级过滤后的 Agent 列表
+ */
 const filteredAgents = computed(() => {
   if (!riskFilter.value) return validAgents.value
   return validAgents.value.filter(agent => {
@@ -220,6 +287,10 @@ const filteredAgents = computed(() => {
     return level === riskFilter.value
   })
 })
+
+/**
+ * 当前选中 Agent 的高风险帖子
+ */
 const highRiskPosts = computed(() => {
   const posts = selectedAgent.value?.recent_posts || []
   return posts.filter((post: any) => {
@@ -230,6 +301,7 @@ const highRiskPosts = computed(() => {
 
 /**
  * 获取 Agent 风险等级
+ * @param agent Agent 对象
  */
 const getAgentRiskLevel = (agent: any) => {
   if (!agent) return 'low'
@@ -244,6 +316,7 @@ const getAgentRiskLevel = (agent: any) => {
 
 /**
  * 获取帖子风险等级
+ * @param post 帖子对象
  */
 const getPostRiskLevel = (post: any) => {
   if (!post) return 'low'
@@ -257,14 +330,16 @@ const getPostRiskLevel = (post: any) => {
 }
 
 /**
- * 判断是否为 UUID 格式
+ * 判断字符串是否为 UUID 格式
+ * @param value 待检查的字符串
  */
 const isUuid = (value: string) => {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 /**
- * 合成 Agent 展示名称
+ * 从 ID 中合成 Agent 展示名称（用于 UUID 的后几位）
+ * @param id Agent ID
  */
 const composeAgentName = (id: string) => {
   const parts = id.split('-')
@@ -275,25 +350,31 @@ const composeAgentName = (id: string) => {
 }
 
 /**
- * 获取 Agent 展示名称
+ * 获取 Agent 展示名称（优先使用 name，如果是 UUID 则合成名称）
+ * @param agent Agent 对象
  */
 const getDisplayName = (agent: any) => {
-  if (!agent) return 'Unknown'
+  if (!agent) return t('common.unknown')
   const name = (agent.name || '').trim()
   if (name && !isUuid(name)) return name
   const id = (agent.id || name || '').trim()
-  if (!id) return 'Unknown'
+  if (!id) return t('common.unknown')
   return composeAgentName(id)
 }
 
 /**
- * 获取头像文字
+ * 获取 Agent 头像展示文字（名称首字母）
+ * @param agent Agent 对象
  */
 const getAvatarText = (agent: any) => {
   const displayName = getDisplayName(agent)
   return displayName.charAt(0) || '?'
 }
 
+/**
+ * 获取风险等级对应的 Element Plus 标签类型
+ * @param level 风险等级
+ */
 const getRiskType = (level: string | undefined): string => {
   if (!level) return 'info'
   const types: Record<string, string> = {
@@ -305,32 +386,32 @@ const getRiskType = (level: string | undefined): string => {
   return types[level] || 'info'
 }
 
+/**
+ * 获取风险等级展示标签（支持 i18n）
+ * @param level 风险等级
+ */
 const getRiskLabel = (level: string | undefined): string => {
-  if (!level) return '未知'
-  const labels: Record<string, string> = {
-    'low': '低风险',
-    'medium': '中风险',
-    'high': '高风险',
-    'critical': '极高风险'
-  }
-  return labels[level] || level
+  if (!level) return t('common.unknown')
+  const label = riskLabels[level]
+  return label ? (languageStore.locale === 'zh' ? label.zh : label.en) : level
 }
 
 /**
- * 格式化时间
+ * 格式化时间戳为本地时间字符串
+ * @param timestamp 时间戳（秒）
  */
 const formatTime = (timestamp: number | undefined): string => {
-  if (!timestamp) return '从未'
+  if (!timestamp) return '-'
   try {
     const date = new Date(timestamp * 1000)
-    return date.toLocaleString('zh-CN')
+    return date.toLocaleString(languageStore.locale === 'zh' ? 'zh-CN' : 'en-US')
   } catch {
-    return '无效时间'
+    return '-'
   }
 }
 
 /**
- * 拉取风险分布数据
+ * 拉取风险分布统计数据
  */
 const fetchRiskStats = async () => {
   try {
@@ -349,7 +430,8 @@ const fetchRiskStats = async () => {
 }
 
 /**
- * 查看 Agent 详情
+ * 查看 Agent 详情信息
+ * @param agent Agent 对象
  */
 const viewAgentDetail = async (agent: any) => {
   if (!agent?.id) return
@@ -367,17 +449,24 @@ const viewAgentDetail = async (agent: any) => {
 }
 
 /**
- * 刷新 Agent 列表
+ * 刷新 Agent 列表及统计数据
  */
 const refreshAgents = async () => {
   await store.fetchAgents()
   await fetchRiskStats()
 }
 
+/**
+ * 设置风险等级过滤条件（点击卡片切换）
+ * @param level 风险等级
+ */
 const setRiskFilter = (level: string) => {
   riskFilter.value = riskFilter.value === level ? '' : level
 }
 
+/**
+ * 生命周期钩子：组件挂载时启动刷新
+ */
 onMounted(() => {
   if (validAgents.value.length === 0) {
     refreshAgents()
@@ -386,6 +475,9 @@ onMounted(() => {
   refreshInterval = window.setInterval(refreshAgents, 30000)
 })
 
+/**
+ * 生命周期钩子：组件卸载时清除定时器
+ */
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
@@ -448,83 +540,190 @@ onUnmounted(() => {
   padding: 60px;
 }
 
-.risk-stats-grid {
+/* 统计卡片网格 */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
 }
 
-/* 即使在较小屏幕上也保持 4 列，除非非常窄 */
+.stat-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-glow);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
+}
+
+.stat-card.active {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+}
+
+.card-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.stat-icon.green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.stat-icon.orange {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.stat-icon.red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.stat-icon.purple {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+.stat-icon :deep(svg) {
+  width: 32px;
+  height: 32px;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* 风险卡片特殊样式 */
+.risk-card {
+  border-left: 4px solid;
+}
+
+.risk-card.low {
+  border-left-color: #10b981;
+}
+
+.risk-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.risk-card.high {
+  border-left-color: #ef4444;
+}
+
+.risk-card.critical {
+  border-left-color: #7c3aed;
+}
+
+.risk-indicator-bar {
+  height: 4px;
+  background: rgba(75, 85, 99, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.risk-level {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.risk-card.low .risk-level {
+  background: #10b981;
+}
+
+.risk-card.medium .risk-level {
+  background: #f59e0b;
+}
+
+.risk-card.high .risk-level {
+  background: #ef4444;
+}
+
+.risk-card.critical .risk-level {
+  background: #7c3aed;
+}
+
+/* 响应式适配 */
 @media (max-width: 768px) {
-  .risk-stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   
-  .risk-stat-card {
-    padding: 12px 8px;
+  .stat-card {
+    padding: 16px;
   }
   
-  .risk-count {
-    font-size: 20px;
+  .stat-value {
+    font-size: 22px;
   }
   
-  .risk-label {
-    font-size: 11px;
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .stat-icon :deep(svg) {
+    width: 24px;
+    height: 24px;
   }
 }
 
 @media (max-width: 480px) {
-  .risk-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
-}
-
-.risk-stat-card {
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.risk-stat-card:hover {
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.15);
-  transform: translateY(-2px);
-}
-
-.risk-stat-card.active {
-  border-color: rgba(59, 130, 246, 0.7);
-  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.2);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.12));
-}
-
-.risk-stat-card.low {
-  border-left: 4px solid #10b981;
-}
-
-.risk-stat-card.medium {
-  border-left: 4px solid #f59e0b;
-}
-
-.risk-stat-card.high {
-  border-left: 4px solid #ef4444;
-}
-
-.risk-count {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.risk-label {
-  font-size: 14px;
-  color: var(--text-secondary);
 }
 
 .table-card {
@@ -954,42 +1153,42 @@ onUnmounted(() => {
   }
   
   .name-cell::before {
-    content: '名称';
+    content: var(--label-name);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;
   }
   
   .risk-cell::before {
-    content: '风险';
+    content: var(--label-risk);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;
   }
   
   .score-cell::before {
-    content: '阴谋指数';
+    content: var(--label-score);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;
   }
   
   .count-cell::before {
-    content: '发帖';
+    content: var(--label-posts);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;
   }
   
   .time-cell::before {
-    content: '最后活跃';
+    content: var(--label-time);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;
   }
   
   .action-cell::before {
-    content: '操作';
+    content: var(--label-action);
     color: var(--text-secondary);
     font-size: 12px;
     margin-right: 8px;

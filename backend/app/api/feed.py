@@ -114,8 +114,9 @@ async def get_post(post_id: str):
     获取单个帖子详情
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             cursor = await db.execute(
                 """
@@ -170,8 +171,9 @@ async def get_post_comments(
     获取帖子的评论
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             cursor = await db.execute(
                 """

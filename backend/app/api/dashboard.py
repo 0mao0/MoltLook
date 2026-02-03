@@ -147,7 +147,8 @@ async def get_realtime_stats():
     获取实时统计
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 总帖子数
             cursor = await db.execute("SELECT COUNT(*) FROM posts")
             total_posts = (await cursor.fetchone())[0]
@@ -184,7 +185,8 @@ async def get_risk_distribution():
     获取风险等级分布
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             cursor = await db.execute("""
                 SELECT 
                     COALESCE(risk_level, 'low') as level,

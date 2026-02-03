@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { 
   DataLine, 
   Document, 
@@ -13,17 +14,35 @@ import { useLanguageStore } from '@/stores/language'
 
 const route = useRoute()
 const languageStore = useLanguageStore()
+const { t, locale } = useI18n()
 const activeMenu = computed(() => route.path)
 
 const menuItems = [
-  { path: '/feed', name: 'feed', label: '帖子流', icon: Document },
-  { path: '/agents', name: 'agents', label: 'Agent 监控', icon: UserFilled },
-  { path: '/network', name: 'network', label: '关系网络', icon: Share },
+  { path: '/dashboard', name: 'dashboard', labelKey: 'menu.dashboard', icon: DataLine },
+  { path: '/feed', name: 'feed', labelKey: 'menu.feed', icon: Document },
+  { path: '/agents', name: 'agents', labelKey: 'menu.agents', icon: UserFilled },
+  { path: '/network', name: 'network', labelKey: 'menu.network', icon: Share },
 ]
 
 const toggleLanguage = () => {
   languageStore.toggleLocale()
 }
+
+// 监听语言变化更新标题
+watch(() => locale.value, (newLocale) => {
+  const titleKey = route.meta.labelKey as string || (route.name ? `menu.${String(route.name)}` : '')
+  if (titleKey) {
+    document.title = `${t(titleKey)} - ${t('app.name')}`
+  }
+}, { immediate: true })
+
+// 监听路由变化更新标题
+watch(() => route.path, () => {
+  const titleKey = route.meta.labelKey as string || (route.name ? `menu.${String(route.name)}` : '')
+  if (titleKey) {
+    document.title = `${t(titleKey)} - ${t('app.name')}`
+  }
+})
 </script>
 
 <template>
@@ -36,8 +55,8 @@ const toggleLanguage = () => {
               <el-icon size="22"><Monitor /></el-icon>
             </div>
             <div class="logo-text">
-              <h1>MoltLook</h1>
-              <span class="tagline">Molt社区观察器</span>
+              <h1>{{ t('app.name') }}</h1>
+              <span class="tagline">{{ t('app.tagline') }}</span>
             </div>
           </div>
           <nav class="top-tabs">
@@ -48,7 +67,7 @@ const toggleLanguage = () => {
               :class="['tab-item', { active: activeMenu === item.path }]"
             >
               <el-icon size="16"><component :is="item.icon" /></el-icon>
-              <span>{{ item.label }}</span>
+              <span>{{ t(item.labelKey) }}</span>
             </router-link>
           </nav>
         </div>
@@ -56,7 +75,7 @@ const toggleLanguage = () => {
         <div class="header-actions">
           <button class="lang-switch-btn" @click="toggleLanguage">
             <el-icon size="14"><Switch /></el-icon>
-            <span>{{ languageStore.isChinese() ? 'English' : '中文' }}</span>
+            <span>{{ locale === 'zh' ? t('common.english') : t('common.chinese') }}</span>
           </button>
         </div>
       </header>

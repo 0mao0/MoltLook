@@ -35,7 +35,8 @@ class GraphAnalyzer:
         Returns:
             dict: agent_id -> pagerank_score
         """
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 获取所有节点和边
             cursor = await db.execute("""
                 SELECT DISTINCT source_id FROM interactions
@@ -98,7 +99,8 @@ class GraphAnalyzer:
         Returns:
             dict: agent_id -> community_id
         """
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 获取所有边
             cursor = await db.execute("""
                 SELECT DISTINCT source_id, target_id 
@@ -155,7 +157,8 @@ class GraphAnalyzer:
         communities = await self.detect_communities()
         
         # 更新数据库
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 更新 PageRank
             for agent_id, score in pagerank_scores.items():
                 await db.execute(

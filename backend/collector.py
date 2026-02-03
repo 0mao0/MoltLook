@@ -278,10 +278,16 @@ class Collector:
         """采集任务 - 60秒循环"""
         logger.info("Starting collection task...")
         
+        retry_count = 0
+        max_retries = 3
+        
         while self.running:
             try:
                 # 获取采集状态
                 async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                    # 再次确保 WAL 模式，防止由于其他进程导致的锁定
+                    await db.execute("PRAGMA journal_mode=WAL;")
+                    await db.execute("PRAGMA busy_timeout = 5000;")
                     state = await self.get_collection_state(db)
                 
                 last_seen_id = state["last_seen_id"]
@@ -303,18 +309,32 @@ class Collector:
                     # 更新采集状态
                     last_post_id = posts[-1].get("id")
                     async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                        await db.execute("PRAGMA journal_mode=WAL;")
+                        await db.execute("PRAGMA busy_timeout = 5000;")
                         await self.update_collection_state(
                             db, 
                             last_seen_id=last_post_id,
                             total_posts=state["total_posts"] + new_count
                         )
+                    retry_count = 0 # 成功后重置重试计数
                 else:
                     logger.debug("No new posts")
+                    # 如果连续多次没有新帖子，且 last_seen_id 存在，尝试稍微回退一点游标（可选逻辑）
+                    # 暂时保持现状，仅打印日志
                 
             except Exception as e:
-                logger.error(f"Collection error: {e}")
+                retry_count += 1
+                logger.error(f"Collection error (Retry {retry_count}/{max_retries}): {e}")
+                
+                # 如果是网络或 API 错误，增加等待时间
+                if retry_count >= max_retries:
+                    logger.warning("Max retries reached, cooling down for 5 minutes...")
+                    await asyncio.sleep(300) 
+                    retry_count = 0
+                else:
+                    await asyncio.sleep(10 * retry_count) # 指数退避
             
-            # 等待 60 秒
+            # 等待设定的间隔
             await asyncio.sleep(settings.FETCH_INTERVAL)
     
     async def status_check_task(self):
@@ -374,7 +394,8 @@ class Collector:
     async def generate_observation_post(self) -> Optional[str]:
         """生成观察报告帖子"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
+            async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                await db.execute("PRAGMA busy_timeout = 5000;")
                 # 获取最近统计
                 cursor = await db.execute(
                     "SELECT COUNT(*) FROM posts WHERE created_at > strftime('%s', 'now', '-1 hour')"

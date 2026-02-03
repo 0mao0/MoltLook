@@ -3,7 +3,7 @@
  */
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -49,9 +49,11 @@ export const agentsApi = {
     api.get('/agents/search', { params: { query, limit } })
 }
 
-// Translation API
+// Translation & Analysis API
 export const translationApi = {
-  translate: (content: string) => api.post('/translate', { content }, { timeout: 30000 })
+  translate: (content: string) => api.post('/translate', { content }, { timeout: 30000 }),
+  analyze: (content: string, riskLevel: string, targetLang: string) => 
+    api.post('/analyze', { content, risk_level: riskLevel, target_lang: targetLang }, { timeout: 45000 })
 }
 
 export default api

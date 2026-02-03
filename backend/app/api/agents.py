@@ -222,8 +222,9 @@ async def get_risky_agents(
         min_conspiracy: 最小平均阴谋指数
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             cursor = await db.execute(
                 """
@@ -271,8 +272,9 @@ async def search_agents(
         limit: 返回数量
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             cursor = await db.execute(
                 """

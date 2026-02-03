@@ -7,27 +7,27 @@
             class="risk-select-card all" 
             :class="{ active: !filters.riskLevel }" 
             @click="setRisk('')"
-          >全部</div>
+          >{{ t('common.all') }}</div>
           <div 
             class="risk-select-card low" 
             :class="{ active: filters.riskLevel === 'low' }" 
             @click="setRisk('low')"
-          >低风险 {{ formatRiskCount('low') }}</div>
+          >{{ t('risk.low') }} {{ formatRiskCount('low') }}</div>
           <div 
             class="risk-select-card medium" 
             :class="{ active: filters.riskLevel === 'medium' }" 
             @click="setRisk('medium')"
-          >中风险 {{ formatRiskCount('medium') }}</div>
+          >{{ t('risk.medium') }} {{ formatRiskCount('medium') }}</div>
           <div 
             class="risk-select-card high" 
             :class="{ active: filters.riskLevel === 'high' }" 
             @click="setRisk('high')"
-          >高风险 {{ formatRiskCount('high') }}</div>
+          >{{ t('risk.high') }} {{ formatRiskCount('high') }}</div>
           <div 
             class="risk-select-card critical" 
             :class="{ active: filters.riskLevel === 'critical' }" 
             @click="setRisk('critical')"
-          >极高风险 {{ formatRiskCount('critical') }}</div>
+          >{{ t('risk.critical') }} {{ formatRiskCount('critical') }}</div>
         </div>
       </div>
     </div>
@@ -38,10 +38,7 @@
       </div>
       
       <div v-else-if="posts.length === 0" class="empty-state">
-        <el-empty description="暂无帖子数据">
-          <button type="button" class="refresh-btn-native" @click="refreshPosts">
-            刷新数据
-          </button>
+        <el-empty :description="t('feed.empty')">
         </el-empty>
       </div>
       
@@ -53,10 +50,15 @@
             class="post-card"
             :class="post.risk_level"
           >
-            <!-- Agent 标签移至左上角 -->
-            <div class="author-card">
-              <span class="author-label">Agent</span>
-              <span class="author-name-cn">{{ getAgentName(post) }}</span>
+            <!-- Agent 卡片 -->
+            <div class="agent-badge">
+              <div class="badge-prefix">
+                <el-icon size="12"><UserFilled /></el-icon>
+                <span>{{ t('common.agent') }}</span>
+              </div>
+              <div class="badge-content">
+                {{ getAgentName(post) }}
+              </div>
             </div>
 
             <div class="post-header">
@@ -66,7 +68,7 @@
                 :href="post.url || '#'" 
                 target="_blank"
               >
-                {{ post.title || '查看原帖' }}
+                {{ post.title || t('common.viewOriginal') }}
               </a>
               <div class="risk-badge" :style="{ '--badge-color': getRiskColor(post.risk_level) }">
                 {{ getRiskLabel(post.risk_level) }}
@@ -80,7 +82,7 @@
             <div v-if="post.translation" class="post-translation">
               <div class="translation-header">
                 <el-icon size="14"><Edit /></el-icon>
-                <span>翻译结果</span>
+                <span>{{ t('common.analysisResult') }}</span>
               </div>
               <p>{{ post.translation }}</p>
             </div>
@@ -91,10 +93,10 @@
               <button 
                 type="button" 
                 class="translate-btn" 
-                @click="translatePost(post)"
-                :disabled="isTranslating(post.id)"
+                @click="analyzePost(post)"
+                :disabled="isAnalyzing(post.id)"
               >
-                <span>{{ isTranslating(post.id) ? '翻译中...' : '翻译' }}</span>
+                <span>{{ isAnalyzing(post.id) ? t('common.analyzing') : t('common.analyze') }}</span>
               </button>
             </div>
           </div>
@@ -116,7 +118,7 @@
     
     <el-dialog
       v-model="detailDialogVisible"
-      title="帖子详情"
+      :title="t('feed.detailTitle')"
       width="600px"
       destroy-on-close
     >
@@ -126,36 +128,44 @@
             {{ selectedPost.author_id?.charAt(0) || '?' }}
           </el-avatar>
           <div class="author-meta">
-            <span class="author-name">{{ getAgentName(selectedPost) }}</span>
+            <div class="agent-badge">
+              <div class="badge-prefix">
+                <el-icon size="12"><UserFilled /></el-icon>
+                <span>{{ t('common.agent') }}</span>
+              </div>
+              <div class="badge-content">
+                {{ getAgentName(selectedPost) }}
+              </div>
+            </div>
             <span class="post-time">{{ formatTime(selectedPost.created_at) }}</span>
           </div>
         </div>
         
         <div class="detail-content">
-          <h4>内容</h4>
+          <h4>{{ t('common.content') }}</h4>
           <p>{{ selectedPost.content }}</p>
           
           <div v-if="selectedPost.translation" class="translation-content">
-            <h4>翻译结果</h4>
+            <h4>{{ t('common.analysisResult') }}</h4>
             <p>{{ selectedPost.translation }}</p>
           </div>
         </div>
         
         <div class="detail-stats">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="风险等级">
+            <el-descriptions-item :label="t('common.riskLevel')">
               <el-tag :type="getRiskType(selectedPost.risk_level)" effect="dark">
                 {{ getRiskLabel(selectedPost.risk_level) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="阴谋指数">
+            <el-descriptions-item :label="t('common.score')">
               {{ (selectedPost.conspiracy_score || 0).toFixed(1) }}/10
             </el-descriptions-item>
-            <el-descriptions-item label="情感">
-              {{ selectedPost.sentiment !== undefined ? formatSentiment(selectedPost.sentiment) : '无数据' }}
+            <el-descriptions-item :label="t('common.sentiment')">
+              {{ selectedPost.sentiment !== undefined ? formatSentiment(selectedPost.sentiment) : t('common.noData') }}
             </el-descriptions-item>
-            <el-descriptions-item label="社区">
-              {{ selectedPost.submolt || 'general' }}
+            <el-descriptions-item :label="t('common.community')">
+              {{ getSubmoltLabel(selectedPost.submolt || 'general') }}
             </el-descriptions-item>
           </el-descriptions>
         </div>
@@ -171,14 +181,17 @@ import {
   Refresh, 
   Edit,
   Loading,
-  Warning
+  Warning,
+  UserFilled
 } from '@element-plus/icons-vue'
 import { useDataStore } from '@/stores/data'
 import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { translationApi, dashboardApi } from '@/api'
 import { submoltLabels, riskLabels } from '@/locales'
 
+const { t } = useI18n()
 const languageStore = useLanguageStore()
 const store = useDataStore()
 const { posts, feedTotal, isLoading, agents } = storeToRefs(store)
@@ -201,8 +214,8 @@ let refreshInterval: ReturnType<typeof setInterval> | null = null
 
 const detailDialogVisible = ref(false)
 const selectedPost = ref<any>(null)
-const translatedPosts = ref<Map<string, string>>(new Map())
-const translatingPosts = ref<Set<string>>(new Set())
+const analyzedPosts = ref<Map<string, string>>(new Map())
+const analyzingPosts = ref<Set<string>>(new Set())
 
 /**
  * 获取风险分布数据
@@ -218,78 +231,94 @@ const fetchRiskDistribution = async () => {
 
 /**
  * 格式化风险数量显示
+ * @param level 风险等级
  */
 const formatRiskCount = (level: string) => {
   const count = riskDistribution.value[level] || 0
   if ((level === 'low' || level === 'medium') && count >= 1000) {
-    return '(保留1000条)'
+    return `(${t('feed.retainedLimit')})`
   }
   return `(${count})`
 }
 
+/**
+ * 获取子社区标签
+ * @param key 子社区键值
+ */
 const getSubmoltLabel = (key: string) => {
-  if (!key || !key.trim()) return '其他'
+  if (!key || !key.trim()) return t('submolt.other')
   const labels = submoltLabels[key]
-  if (!labels) return '其他'
+  if (!labels) return t('submolt.other')
   return languageStore.locale === 'zh' ? labels.zh : labels.en
 }
 
+/**
+ * 获取子社区颜色
+ * @param key 子社区键值
+ */
 const getSubmoltColor = (key: string) => {
   if (!key || !key.trim()) return '#6b7280'
   return submoltLabels[key]?.color || '#6b7280'
 }
 
+/**
+ * 获取风险等级标签
+ * @param level 风险等级
+ */
 const getRiskLabel = (level: string) => {
-  if (!level || !level.trim()) return '未知'
+  if (!level || !level.trim()) return t('common.unknown')
   const labels = riskLabels[level]
   if (!labels) return level
   return languageStore.locale === 'zh' ? labels.zh : labels.en
 }
 
+/**
+ * 获取风险等级颜色
+ * @param level 风险等级
+ */
 const getRiskColor = (level: string) => {
   if (!level || !level.trim()) return '#6b7280'
   return riskLabels[level]?.color || '#6b7280'
 }
 
-const isTranslating = (postId: string) => {
-  return translatingPosts.value.has(postId)
+/**
+ * 检查帖子是否正在分析中
+ * @param postId 帖子ID
+ */
+const isAnalyzing = (postId: string) => {
+  return analyzingPosts.value.has(postId)
 }
 
+/**
+ * 获取 Agent 名称
+ * @param post 帖子对象
+ */
 const getAgentName = (post: any) => {
   if (post.author_name && post.author_name.trim()) {
     return post.author_name
   }
   const authorId = post.author_id
-  if (!authorId || authorId === 'unknown') return '匿名用户'
+  if (!authorId || authorId === 'unknown') return t('common.anonymous')
+  
   if (agents.value.length > 0) {
     const agent = agents.value.find(a => a && a.id === authorId)
     if (agent && agent.name && agent.name.trim()) {
       return agent.name
     }
   }
-  // 如果没有找到，从 UUID 中提取有意义的名称
-  // UUID 格式: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  // 尝试提取最后一部分作为名称
-  const parts = authorId.split('-')
-  if (parts.length >= 5) {
-    // 使用最后两部分生成名称
-    const suffix = parts.slice(-2).join('')
-    // 将十六进制转换为可见字符
-    const name = decodeUUID(suffix)
-    if (name) return name
+  
+  // 如果找不到名称且 authorId 是 UUID，则不显示长 ID，仅显示匿名
+  if (authorId.includes('-') && authorId.length > 20) {
+    return t('common.anonymous')
   }
-  return authorId.substring(0, 12)
+  
+  return authorId
 }
 
-const decodeUUID = (hex: string) => {
-  // 简单解码：提取字母和数字
-  const clean = hex.replace(/[^a-zA-Z0-9]/g, '')
-  if (clean.length >= 8) {
-    return clean.substring(0, 8)
-  }
-  return null
-}
-
+/**
+ * 获取风险类型对应的 Element Plus 标签类型
+ * @param level 风险等级
+ */
 const getRiskType = (level: string) => {
   const types: Record<string, string> = {
     'low': 'success',
@@ -300,6 +329,10 @@ const getRiskType = (level: string) => {
   return types[level] || 'info'
 }
 
+/**
+ * 获取情感倾向对应的 Element Plus 标签类型
+ * @param val 情感值
+ */
 const getSentimentType = (val: number) => {
   if (!val && val !== 0) return 'info'
   if (val > 0.3) return 'success'
@@ -307,19 +340,33 @@ const getSentimentType = (val: number) => {
   return 'info'
 }
 
+/**
+ * 格式化情感倾向显示
+ * @param val 情感值
+ */
 const formatSentiment = (val: number) => {
-  if (!val && val !== 0) return '中性'
-  if (val > 0.3) return '积极'
-  if (val < -0.3) return '消极'
-  return '中性'
+  if (!val && val !== 0) return t('sentiment.neutral')
+  if (val > 0.3) return t('sentiment.positive')
+  if (val < -0.3) return t('sentiment.negative')
+  return t('sentiment.neutral')
 }
 
+/**
+ * 格式化时间显示
+ * @param timestamp 时间戳（秒）
+ */
 const formatTime = (timestamp: number) => {
   if (!timestamp) return ''
   const date = new Date(timestamp * 1000)
-  return date.toLocaleString('zh-CN')
+  return languageStore.locale === 'zh' 
+    ? date.toLocaleString('zh-CN') 
+    : date.toLocaleString('en-US')
 }
 
+/**
+ * 设置风险等级筛选
+ * @param level 风险等级
+ */
 const setRisk = (level: string) => {
   filters.value.riskLevel = level
   currentPage.value = 1
@@ -327,7 +374,7 @@ const setRisk = (level: string) => {
 }
 
 /**
- * 启动自动刷新
+ * 启动自动刷新定时器
  */
 const startAutoRefresh = () => {
   if (refreshInterval) {
@@ -338,6 +385,9 @@ const startAutoRefresh = () => {
   }, 30000)
 }
 
+/**
+ * 刷新帖子列表和风险分布数据
+ */
 const refreshPosts = async () => {
   await Promise.all([
     store.fetchFeed({
@@ -350,16 +400,28 @@ const refreshPosts = async () => {
   ])
 }
 
+/**
+ * 处理分页大小变化
+ * @param val 分页大小
+ */
 const handleSizeChange = (val: number) => {
   pageSize.value = val
   refreshPosts()
 }
 
+/**
+ * 处理当前页码变化
+ * @param val 当前页码
+ */
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
   refreshPosts()
 }
 
+/**
+ * 查看帖子详情（如果有 URL 则在新窗口打开，否则显示详情弹窗）
+ * @param post 帖子对象
+ */
 const viewPostDetail = (post: any) => {
   if (post.url) {
     window.open(post.url, '_blank')
@@ -369,38 +431,42 @@ const viewPostDetail = (post: any) => {
   }
 }
 
-const translatePost = async (post: any) => {
+/**
+ * 分析帖子内容（LLM 风险分析）
+ * @param post 帖子对象
+ */
+const analyzePost = async (post: any) => {
   const cacheKey = post.id
   
-  if (translatedPosts.value.has(cacheKey)) {
-    post.translation = translatedPosts.value.get(cacheKey)
+  if (analyzedPosts.value.has(cacheKey)) {
+    post.translation = analyzedPosts.value.get(cacheKey)
     return
   }
   
-  if (translatingPosts.value.has(cacheKey)) {
+  if (analyzingPosts.value.has(cacheKey)) {
     return
   }
   
-  translatingPosts.value.add(cacheKey)
+  analyzingPosts.value.add(cacheKey)
   
   try {
-    const response = await translationApi.translate(post.content)
-    if (response.data && response.data.translation) {
-      translatedPosts.value.set(cacheKey, response.data.translation)
-      post.translation = response.data.translation
+    const response = await translationApi.analyze(post.content, post.risk_level, languageStore.locale)
+    if (response.data && response.data.analysis) {
+      analyzedPosts.value.set(cacheKey, response.data.analysis)
+      post.translation = response.data.analysis
     } else {
-      post.translation = '[翻译失败]'
+      post.translation = t('feed.analysisFailed')
     }
   } catch (error: any) {
-    console.error('Translation failed:', error)
+    console.error('Analysis failed:', error)
     if (error?.code === 'ECONNABORTED' || String(error?.message || '').includes('timeout')) {
-      post.translation = '[翻译超时]'
+      post.translation = t('feed.translationTimeout')
       return
     }
-    const errorMsg = error.response?.data?.detail || '[翻译失败]'
+    const errorMsg = error.response?.data?.detail || t('feed.analysisFailed')
     post.translation = errorMsg
   } finally {
-    translatingPosts.value.delete(cacheKey)
+    analyzingPosts.value.delete(cacheKey)
   }
 }
 
@@ -610,33 +676,50 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
-.author-card {
+.agent-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.post-card .agent-badge {
+  margin-bottom: 14px;
+}
+
+.agent-badge:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  transform: translateY(-2px);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.badge-prefix {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0;
-  background: none;
-  border: none;
-  border-radius: 0;
-  flex-shrink: 0;
-  margin-bottom: 8px; /* 添加下边距，与下方标题保持间距 */
-}
-
-.author-label {
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  padding: 6px 10px;
+  color: #60a5fa;
   font-size: 11px;
-  color: #64748b;
+  font-weight: 700;
   text-transform: uppercase;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
+  letter-spacing: 0.8px;
+  border-right: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-.author-name-cn {
-  font-size: 14px;
+.badge-content {
+  padding: 6px 12px;
+  color: #e2e8f0;
+  font-size: 13px;
   font-weight: 600;
-  color: #94a3b8; /* 修改为灰色 */
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  letter-spacing: 0.2px;
 }
 
 .post-time-footer {
@@ -666,13 +749,6 @@ onUnmounted(() => {
   text-decoration: underline;
 }
 
-.author-id {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: monospace;
-  margin-top: 2px;
-}
-
 .post-meta {
   display: flex;
   flex-direction: column;
@@ -698,11 +774,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.author-name {
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .post-time {

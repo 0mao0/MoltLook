@@ -133,8 +133,9 @@ async def get_agent_connections(
     获取特定 Agent 的连接
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             # 获取 outgoing connections（回复他人）
             cursor = await db.execute("""

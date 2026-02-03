@@ -9,7 +9,7 @@
             <el-icon size="32"><Warning /></el-icon>
           </div>
           <div class="stat-info">
-            <span class="stat-label">当前风险等级</span>
+            <span class="stat-label">{{ $t('dashboard.currentRiskLevel') }}</span>
             <span class="stat-value">{{ getRiskLabel(stats?.risk_level) }}</span>
           </div>
         </div>
@@ -26,7 +26,7 @@
             <el-icon size="32"><Document /></el-icon>
           </div>
           <div class="stat-info">
-            <span class="stat-label">24小时帖子数</span>
+            <span class="stat-label">{{ $t('dashboard.posts24h') }}</span>
             <span class="stat-value">{{ formatNumber(stats?.total_posts) }}</span>
           </div>
         </div>
@@ -44,12 +44,12 @@
             <el-icon size="32"><UserFilled /></el-icon>
           </div>
           <div class="stat-info">
-            <span class="stat-label">活跃 Agent</span>
+            <span class="stat-label">{{ $t('dashboard.activeAgents') }}</span>
             <span class="stat-value">{{ formatNumber(stats?.active_agents) }}</span>
           </div>
         </div>
         <div class="stat-trend">
-          <span>实时监控中</span>
+          <span>{{ $t('dashboard.monitoring') }}</span>
         </div>
       </div>
 
@@ -61,49 +61,28 @@
             <el-icon size="32"><Bell /></el-icon>
           </div>
           <div class="stat-info">
-            <span class="stat-label">高风险帖子</span>
+            <span class="stat-label">{{ $t('dashboard.highRiskPosts') }}</span>
             <span class="stat-value">{{ formatNumber(stats?.danger_count) }}</span>
           </div>
         </div>
         <div class="stat-alert" v-if="stats?.danger_count > 0">
           <el-icon><Warning /></el-icon>
-          <span>需要关注</span>
+          <span>{{ $t('dashboard.needAttention') }}</span>
         </div>
-      </div>
-
-      <!-- 平均阴谋指数 -->
-      <div class="stat-card">
-        <div class="card-glow"></div>
-        <div class="card-content">
-          <div class="stat-icon orange">
-            <el-icon size="32"><TrendCharts /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">平均阴谋指数</span>
-            <span class="stat-value">{{ stats?.avg_risk }}/10</span>
-          </div>
-        </div>
-        <el-progress 
-          :percentage="(stats?.avg_risk || 0) * 10" 
-          :color="getProgressColor(stats?.avg_risk || 0)"
-          :show-text="false"
-          class="stat-progress"
-        />
       </div>
     </div>
 
-    <!-- 图表区域 -->
-    <div class="charts-section">
+    <div class="dashboard-charts">
       <!-- 趋势图 -->
       <div class="chart-card">
         <div class="chart-header">
           <div class="chart-title">
             <el-icon><TrendCharts /></el-icon>
-            <span>7天阴谋指数趋势</span>
+            <span>{{ $t('dashboard.trendTitle') }}</span>
           </div>
           <el-radio-group v-model="trendPeriod" size="small">
-            <el-radio-button label="7d">7天</el-radio-button>
-            <el-radio-button label="30d">30天</el-radio-button>
+            <el-radio-button label="7d">{{ $t('dashboard.period7d') }}</el-radio-button>
+            <el-radio-button label="30d">{{ $t('dashboard.period30d') }}</el-radio-button>
           </el-radio-group>
         </div>
         <div ref="trendChartRef" class="chart-container"></div>
@@ -114,7 +93,7 @@
         <div class="chart-header">
           <div class="chart-title">
             <el-icon><PieChart /></el-icon>
-            <span>风险等级分布</span>
+            <span>{{ $t('dashboard.riskDistribution') }}</span>
           </div>
         </div>
         <div ref="pieChartRef" class="chart-container"></div>
@@ -126,9 +105,9 @@
       <div class="section-header">
         <h3>
           <el-icon><Bell /></el-icon>
-          最近警报
+          {{ $t('dashboard.recentAlerts') }}
         </h3>
-        <el-button link type="primary">查看全部</el-button>
+        <el-button link type="primary">{{ $t('common.viewAll') }}</el-button>
       </div>
       <div class="alerts-list">
         <div 
@@ -145,7 +124,7 @@
             <div class="alert-desc">{{ alert.description }}</div>
             <div class="alert-time">{{ alert.time }}</div>
           </div>
-          <el-button link type="primary" size="small">处理</el-button>
+          <el-button link type="primary" size="small">{{ $t('common.handle') }}</el-button>
         </div>
       </div>
     </div>
@@ -153,10 +132,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import * as echarts from 'echarts'
 import { useDataStore } from '@/stores/data'
+import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { 
   DataLine, 
   Refresh, 
@@ -170,7 +151,10 @@ import {
   ArrowDown
 } from '@element-plus/icons-vue'
 import { dashboardApi } from '@/api'
+import { riskLabels } from '@/locales'
 
+const { t } = useI18n()
+const languageStore = useLanguageStore()
 const store = useDataStore()
 const { stats, trend, isLoading } = storeToRefs(store)
 
@@ -194,27 +178,27 @@ interface TrendItem {
 }
 
 // 模拟最近警报数据
-const recentAlerts = ref([
+const recentAlerts = computed(() => [
   {
     id: 1,
     level: 'high',
-    title: '检测到高风险帖子',
-    description: 'Agent "suspicious_user_01" 发布了包含敏感关键词的内容',
-    time: '5分钟前'
+    title: t('dashboard.alertHighTitle'),
+    description: t('dashboard.alertHighDesc'),
+    time: t('dashboard.alertHighTime')
   },
   {
     id: 2,
     level: 'medium',
-    title: '异常活动模式',
-    description: '多个 Agent 在短时间内频繁互动',
-    time: '15分钟前'
+    title: t('dashboard.alertMediumTitle'),
+    description: t('dashboard.alertMediumDesc'),
+    time: t('dashboard.alertMediumTime')
   },
   {
     id: 3,
     level: 'low',
-    title: '新 Agent 注册',
-    description: '发现新的 Agent 加入监控范围',
-    time: '1小时前'
+    title: t('dashboard.alertLowTitle'),
+    description: t('dashboard.alertLowDesc'),
+    time: t('dashboard.alertLowTime')
   }
 ])
 
@@ -229,13 +213,9 @@ const formatNumber = (num: number) => {
 
 // 获取风险标签
 const getRiskLabel = (level: string) => {
-  const labels: Record<string, string> = {
-    'low': '低风险',
-    'medium': '中风险',
-    'high': '高风险',
-    'critical': '极高风险'
-  }
-  return labels[level] || level
+  if (!level) return ''
+  const label = riskLabels[level]
+  return label ? (languageStore.locale === 'zh' ? label.zh : label.en) : level
 }
 
 // 获取风险百分比
@@ -260,6 +240,9 @@ const getProgressColor = (score: number) => {
 const initTrendChart = () => {
   if (!trendChartRef.value) return
   
+  if (trendChart) {
+    trendChart.dispose()
+  }
   trendChart = echarts.init(trendChartRef.value)
   
   const option = {
@@ -270,7 +253,7 @@ const initTrendChart = () => {
       textStyle: { color: '#f9fafb' },
       formatter: (params: any) => {
         return `<div style="font-weight:600">${params[0].name}</div>
-                <div>高风险帖子: <span style="color:#ef4444;font-weight:600">${params[0].value}</span></div>`
+                <div>${t('dashboard.avgConspiracy')}: <span style="color:#ef4444;font-weight:600">${params[0].value}</span></div>`
       }
     },
     grid: {
@@ -316,7 +299,7 @@ const initTrendChart = () => {
       },
       areaStyle: {
         color: {
-          type: 'linear',
+          type: 'linear', 
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
             { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
@@ -334,6 +317,9 @@ const initTrendChart = () => {
 const initPieChart = () => {
   if (!pieChartRef.value) return
   
+  if (pieChart) {
+    pieChart.dispose()
+  }
   pieChart = echarts.init(pieChartRef.value)
   
   const option = {
@@ -346,7 +332,7 @@ const initPieChart = () => {
     legend: {
       orient: 'vertical',
       right: '5%',
-      top: 'center',
+      top: 'center', 
       textStyle: { color: '#9ca3af' }
     },
     series: [{
@@ -371,16 +357,24 @@ const initPieChart = () => {
         }
       },
       data: [
-        { value: riskDistribution.value.low, name: '低风险', itemStyle: { color: '#10b981' } },
-        { value: riskDistribution.value.medium, name: '中风险', itemStyle: { color: '#f59e0b' } },
-        { value: riskDistribution.value.high, name: '高风险', itemStyle: { color: '#ef4444' } },
-        { value: riskDistribution.value.critical, name: '极高风险', itemStyle: { color: '#7c3aed' } }
+        { value: riskDistribution.value.low, name: t('risk.low'), itemStyle: { color: '#10b981' } },
+        { value: riskDistribution.value.medium, name: t('risk.medium'), itemStyle: { color: '#f59e0b' } },
+        { value: riskDistribution.value.high, name: t('risk.high'), itemStyle: { color: '#ef4444' } },
+        { value: riskDistribution.value.critical, name: t('risk.critical'), itemStyle: { color: '#7c3aed' } }
       ]
     }]
   }
   
   pieChart.setOption(option)
 }
+
+// 监听语言变化
+watch(() => languageStore.locale, () => {
+  nextTick(() => {
+    initTrendChart()
+    initPieChart()
+  })
+})
 
 // 获取风险分布数据
 const fetchRiskDistribution = async () => {
@@ -395,7 +389,9 @@ const fetchRiskDistribution = async () => {
   }
 }
 
-// 刷新数据
+/**
+ * 刷新数据
+ */
 const refreshData = async () => {
   await store.fetchDashboard()
   await fetchRiskDistribution()

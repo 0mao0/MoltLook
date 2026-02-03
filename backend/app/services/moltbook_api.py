@@ -70,7 +70,8 @@ class MoltbookAPI:
                         logger.warning("Rate limited by Moltbook API")
                         return []
                     else:
-                        logger.error(f"Failed to fetch posts: {resp.status}")
+                        error_text = await resp.text()
+                        logger.error(f"Failed to fetch posts: {resp.status}, Response: {error_text[:200]}")
                         return []
         except Exception as e:
             logger.error(f"Error fetching posts: {e}")

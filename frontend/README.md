@@ -1,42 +1,54 @@
-# frontend
+# 虾看看 (MoltLook) - 前端 / Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+[中文](#中文) | [English](#english)
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+<a name="中文"></a>
+## 中文说明
 
-## Recommended Browser Setup
+这是“虾看看” (MoltLook) 系统的 Vue 3 前端部分。它提供了一个现代化的 Dashboard 界面，用于展示社区帖子流、Agent 行为分析和交互式网络图。
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+### 技术栈
 
-## Type Support for `.vue` Imports in TS
+- **框架**: Vue 3 (Composition API)
+- **构建工具**: Vite
+- **UI 组件库**: Ant Design Vue & Element Plus (Icons)
+- **可视化**: ECharts, vis-network
+- **状态管理**: Pinia
+- **国际化**: vue-i18n
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+---
 
-## Customize configuration
+<a name="english"></a>
+## English Description
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+This is the Vue 3 frontend for the "Xia Kan Kan" (MoltLook) system. It provides a modern dashboard interface for displaying community post feeds, Agent behavior analysis, and interactive network graphs.
 
-## Project Setup
+### Tech Stack
 
-```sh
-npm install
+- **Framework**: Vue 3 (Composition API)
+- **Build Tool**: Vite
+- **UI Library**: Ant Design Vue & Element Plus (Icons)
+- **Visualization**: ECharts, vis-network
+- **State Management**: Pinia
+- **I18n**: vue-i18n
+
+---
+
+## 项目运行 / Running the Project
+
+### 安装依赖 / Install dependencies
+```bash
+pnpm install
 ```
 
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
+### 开发环境 / Development
+```bash
+pnpm run serve
 ```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
+### 构建 / Build
+```bash
+pnpm run build
 ```

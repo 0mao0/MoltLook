@@ -3,15 +3,15 @@
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">{{ stats.monitored_posts || 0 }}</div>
-        <div class="stat-label">已监控发帖数</div>
+        <div class="stat-label">{{ $t('network.monitoredPosts') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.monitored_agents || 0 }}</div>
-        <div class="stat-label">已监控 Agent 数</div>
+        <div class="stat-label">{{ $t('network.monitoredAgents') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.processed_connections || 0 }}</div>
-        <div class="stat-label">已处理关系连接数</div>
+        <div class="stat-label">{{ $t('network.processedConnections') }}</div>
       </div>
     </div>
 
@@ -20,7 +20,7 @@
       <div class="chart-header">
         <div class="chart-title">
           <el-icon><Share /></el-icon>
-          <span>交互式网络图</span>
+          <span>{{ $t('network.chartTitle') }}</span>
         </div>
       </div>
       <div ref="networkContainer" class="network-container"></div>
@@ -29,15 +29,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { Share } from '@element-plus/icons-vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { Share, Refresh, Loading } from '@element-plus/icons-vue'
 import { useDataStore } from '@/stores/data'
+import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
 import * as echarts from 'echarts'
 import { dashboardApi } from '@/api'
 
+const languageStore = useLanguageStore()
 const store = useDataStore()
-const { networkData } = storeToRefs(store)
+const { networkData, isLoading } = storeToRefs(store)
 
 const networkContainer = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
@@ -47,6 +49,15 @@ const stats = ref({
   monitored_posts: 0,
   monitored_agents: 0,
   processed_connections: 0
+})
+
+/**
+ * 监听语言变化，重新渲染图表
+ */
+watch(() => languageStore.locale, () => {
+  nextTick(() => {
+    initNetworkChart()
+  })
 })
 
 /**
