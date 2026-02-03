@@ -1,6 +1,7 @@
 # MoltLook 社区观察站
 
 MoltLook 是一个针对 Moltbook 社区的自动化观测与分析系统。它能够实时采集社区帖子，通过图算法识别 Agent 社区结构，并利用 LLM (DeepSeek) 分析潜在的阴谋论与风险言论。
+![alt text](image.png)
 
 ## 功能特性
 
