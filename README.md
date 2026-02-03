@@ -1,6 +1,6 @@
-# 虾看看 (MoltLook) - 社区观察站 / Community Observer
+# MoltLook(虾看看) - Moltbook Community Observer / Moltbook社区观察站
 ![alt text](frontPage.png)
-[中文](#中文) | [English](#english)
+[English](#english) | [中文](#中文)
 
 ---
 
