@@ -2,32 +2,83 @@
   <div class="feed">
     <div class="filter-bar">
       <div class="filter-group">
-        <div class="risk-card-group">
+        <div class="risk-cards-grid">
           <div 
-            class="risk-select-card all" 
-            :class="{ active: !filters.riskLevel }" 
-            @click="setRisk('')"
-          >{{ t('common.all') }}</div>
-          <div 
-            class="risk-select-card low" 
+            class="stat-card risk-card low" 
             :class="{ active: filters.riskLevel === 'low' }" 
             @click="setRisk('low')"
-          >{{ t('risk.low') }} {{ formatRiskCount('low') }}</div>
+          >
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon green">
+                <el-icon size="32"><CircleCheck /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ t('risk.low') }}</span>
+                <span class="stat-value">{{ formatRiskCount('low') }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: rgb(16, 185, 129);"></div>
+            </div>
+          </div>
           <div 
-            class="risk-select-card medium" 
+            class="stat-card risk-card medium" 
             :class="{ active: filters.riskLevel === 'medium' }" 
             @click="setRisk('medium')"
-          >{{ t('risk.medium') }} {{ formatRiskCount('medium') }}</div>
+          >
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon orange">
+                <el-icon size="32"><Warning /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ t('risk.medium') }}</span>
+                <span class="stat-value">{{ formatRiskCount('medium') }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: rgb(245, 158, 11);"></div>
+            </div>
+          </div>
           <div 
-            class="risk-select-card high" 
+            class="stat-card risk-card high" 
             :class="{ active: filters.riskLevel === 'high' }" 
             @click="setRisk('high')"
-          >{{ t('risk.high') }} {{ formatRiskCount('high') }}</div>
+          >
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon red">
+                <el-icon size="32"><CircleClose /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ t('risk.high') }}</span>
+                <span class="stat-value">{{ formatRiskCount('high') }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: rgb(239, 68, 68);"></div>
+            </div>
+          </div>
           <div 
-            class="risk-select-card critical" 
+            class="stat-card risk-card critical" 
             :class="{ active: filters.riskLevel === 'critical' }" 
             @click="setRisk('critical')"
-          >{{ t('risk.critical') }} {{ formatRiskCount('critical') }}</div>
+          >
+            <div class="card-glow"></div>
+            <div class="card-content">
+              <div class="stat-icon purple">
+                <el-icon size="32"><WarningFilled /></el-icon>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">{{ t('risk.critical') }}</span>
+                <span class="stat-value">{{ formatRiskCount('critical') }}</span>
+              </div>
+            </div>
+            <div class="risk-indicator-bar">
+              <div class="risk-level" style="width: 100%; background: rgb(124, 58, 237);"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -124,9 +175,6 @@
     >
       <div v-if="selectedPost" class="post-detail">
         <div class="detail-header">
-          <el-avatar :size="48" class="author-avatar">
-            {{ selectedPost.author_id?.charAt(0) || '?' }}
-          </el-avatar>
           <div class="author-meta">
             <div class="agent-badge">
               <div class="badge-prefix">
@@ -182,7 +230,10 @@ import {
   Edit,
   Loading,
   Warning,
-  UserFilled
+  UserFilled,
+  CircleCheck,
+  CircleClose,
+  WarningFilled
 } from '@element-plus/icons-vue'
 import { useDataStore } from '@/stores/data'
 import { useLanguageStore } from '@/stores/language'
@@ -236,9 +287,9 @@ const fetchRiskDistribution = async () => {
 const formatRiskCount = (level: string) => {
   const count = riskDistribution.value[level] || 0
   if ((level === 'low' || level === 'medium') && count >= 1000) {
-    return `(${t('feed.retainedLimit')})`
+    return t('feed.retainedLimit')
   }
-  return `(${count})`
+  return count.toString()
 }
 
 /**
@@ -582,45 +633,122 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  background: rgba(30, 41, 59, 0.4);
-  padding: 16px 24px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .filter-group {
   display: flex;
   align-items: center;
   gap: 24px;
+  width: 100%;
 }
 
-.risk-card-group {
-  display: flex;
-  gap: 8px;
+.risk-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  width: 100%;
 }
 
-.risk-select-card {
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
+.stat-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 20px;
+  overflow: hidden;
+  transition: all 0.3s ease;
   cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
 }
 
-.risk-select-card:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: white;
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
 }
 
-.risk-select-card.active.all { background: rgba(148, 163, 184, 0.2); color: #f8fafc; border-color: #94a3b8; }
-.risk-select-card.active.low { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: #10b981; }
-.risk-select-card.active.medium { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: #f59e0b; }
-.risk-select-card.active.high { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: #ef4444; }
-.risk-select-card.active.critical { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border-color: #dc2626; }
+.stat-card.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.card-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.stat-icon.orange {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.stat-icon.red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.stat-icon.purple {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.risk-indicator-bar {
+  height: 4px;
+  background: rgba(75, 85, 99, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.risk-level {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
 
 .auto-refresh {
   display: flex;

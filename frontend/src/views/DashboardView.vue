@@ -27,12 +27,13 @@
           </div>
           <div class="stat-info">
             <span class="stat-label">{{ $t('dashboard.posts24h') }}</span>
-            <span class="stat-value">{{ formatNumber(stats?.total_posts) }}</span>
+            <span class="stat-value">{{ formatNumber(stats?.posts_24h) }}</span>
           </div>
         </div>
-        <div class="stat-trend up">
-          <el-icon><ArrowUp /></el-icon>
-          <span>+12.5%</span>
+        <div class="stat-trend" :class="getGrowthClass(stats?.growth_rate)">
+          <el-icon v-if="stats?.growth_rate > 0"><ArrowUp /></el-icon>
+          <el-icon v-else-if="stats?.growth_rate < 0"><ArrowDown /></el-icon>
+          <span>{{ formatGrowthRate(stats?.growth_rate) }}</span>
         </div>
       </div>
 
@@ -58,7 +59,7 @@
         <div class="card-glow"></div>
         <div class="card-content">
           <div class="stat-icon red">
-            <el-icon size="32"><Bell /></el-icon>
+            <el-icon size="32" color="#ef4444"><WarningFilled /></el-icon>
           </div>
           <div class="stat-info">
             <span class="stat-label">{{ $t('dashboard.highRiskPosts') }}</span>
@@ -87,46 +88,6 @@
         </div>
         <div ref="trendChartRef" class="chart-container"></div>
       </div>
-
-      <!-- 风险分布 -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <div class="chart-title">
-            <el-icon><PieChart /></el-icon>
-            <span>{{ $t('dashboard.riskDistribution') }}</span>
-          </div>
-        </div>
-        <div ref="pieChartRef" class="chart-container"></div>
-      </div>
-    </div>
-
-    <!-- 最近警报 -->
-    <div class="alerts-section" v-if="recentAlerts.length > 0">
-      <div class="section-header">
-        <h3>
-          <el-icon><Bell /></el-icon>
-          {{ $t('dashboard.recentAlerts') }}
-        </h3>
-        <el-button link type="primary">{{ $t('common.viewAll') }}</el-button>
-      </div>
-      <div class="alerts-list">
-        <div 
-          v-for="alert in recentAlerts" 
-          :key="alert.id" 
-          class="alert-item"
-          :class="alert.level"
-        >
-          <div class="alert-icon">
-            <el-icon size="20"><Warning /></el-icon>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">{{ alert.title }}</div>
-            <div class="alert-desc">{{ alert.description }}</div>
-            <div class="alert-time">{{ alert.time }}</div>
-          </div>
-          <el-button link type="primary" size="small">{{ $t('common.handle') }}</el-button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -142,11 +103,10 @@ import {
   DataLine, 
   Refresh, 
   Warning, 
+  WarningFilled,
   Document, 
-  UserFilled, 
-  Bell,
+  UserFilled,
   TrendCharts,
-  PieChart,
   ArrowUp,
   ArrowDown
 } from '@element-plus/icons-vue'
@@ -159,48 +119,17 @@ const store = useDataStore()
 const { stats, trend, isLoading } = storeToRefs(store)
 
 const trendChartRef = ref<HTMLElement>()
-const pieChartRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
-let pieChart: echarts.ECharts | null = null
 
 const trendPeriod = ref('7d')
-const riskDistribution = ref<Record<string, number>>({
-  low: 0,
-  medium: 0,
-  high: 0,
-  critical: 0
-})
 
 // 定义趋势数据类型
 interface TrendItem {
   date: string
-  count: number
+  total_count: number
+  risk_score_sum: number
+  risk_index: number
 }
-
-// 模拟最近警报数据
-const recentAlerts = computed(() => [
-  {
-    id: 1,
-    level: 'high',
-    title: t('dashboard.alertHighTitle'),
-    description: t('dashboard.alertHighDesc'),
-    time: t('dashboard.alertHighTime')
-  },
-  {
-    id: 2,
-    level: 'medium',
-    title: t('dashboard.alertMediumTitle'),
-    description: t('dashboard.alertMediumDesc'),
-    time: t('dashboard.alertMediumTime')
-  },
-  {
-    id: 3,
-    level: 'low',
-    title: t('dashboard.alertLowTitle'),
-    description: t('dashboard.alertLowDesc'),
-    time: t('dashboard.alertLowTime')
-  }
-])
 
 // 格式化数字
 const formatNumber = (num: number) => {
@@ -209,6 +138,19 @@ const formatNumber = (num: number) => {
     return (num / 1000).toFixed(1) + 'K'
   }
   return num.toString()
+}
+
+// 格式化增长率
+const formatGrowthRate = (rate: number) => {
+  if (rate === undefined || rate === null) return '0%'
+  const sign = rate > 0 ? '+' : ''
+  return `${sign}${rate.toFixed(1)}%`
+}
+
+// 获取增长率样式类
+const getGrowthClass = (rate: number) => {
+  if (!rate) return ''
+  return rate > 0 ? 'up' : 'down'
 }
 
 // 获取风险标签
@@ -238,12 +180,24 @@ const getProgressColor = (score: number) => {
 
 // 初始化趋势图
 const initTrendChart = () => {
-  if (!trendChartRef.value) return
+  if (!trendChartRef.value) {
+    console.warn('trendChartRef is null')
+    return
+  }
   
   if (trendChart) {
     trendChart.dispose()
   }
   trendChart = echarts.init(trendChartRef.value)
+  
+  const trendData = (trend.value as TrendItem[])
+  console.log('Trend data:', trendData)
+  
+  if (!trendData || trendData.length === 0) {
+    console.warn('Trend data is empty')
+    trendChart.clear()
+    return
+  }
   
   const option = {
     tooltip: {
@@ -252,8 +206,12 @@ const initTrendChart = () => {
       borderColor: 'rgba(75, 85, 99, 0.4)',
       textStyle: { color: '#f9fafb' },
       formatter: (params: any) => {
-        return `<div style="font-weight:600">${params[0].name}</div>
-                <div>${t('dashboard.avgConspiracy')}: <span style="color:#ef4444;font-weight:600">${params[0].value}</span></div>`
+        const data = params[0]
+        const trendItem = trendData[data.dataIndex]
+        return `<div style="font-weight:600">${data.name}</div>
+                <div>当日风险指数: <span style="color:#ef4444;font-weight:600">${trendItem.risk_index}</span></div>
+                <div>风险分数总和: ${trendItem.risk_score_sum}</div>
+                <div>当日总帖子数: ${trendItem.total_count}</div>`
       }
     },
     grid: {
@@ -265,7 +223,7 @@ const initTrendChart = () => {
     },
     xAxis: {
       type: 'category',
-      data: (trend.value as TrendItem[]).map((t: TrendItem) => t.date),
+      data: trendData.map((t: any) => t.date),
       axisLine: { lineStyle: { color: 'rgba(75, 85, 99, 0.4)' } },
       axisLabel: { color: '#9ca3af' }
     },
@@ -273,10 +231,13 @@ const initTrendChart = () => {
       type: 'value',
       axisLine: { show: false },
       splitLine: { lineStyle: { color: 'rgba(75, 85, 99, 0.2)' } },
-      axisLabel: { color: '#9ca3af' }
+      axisLabel: { 
+        color: '#9ca3af'
+      }
     },
     series: [{
-      data: (trend.value as TrendItem[]).map((t: TrendItem) => t.count),
+      name: '当日风险指数',
+      data: trendData.map((t: any) => t.risk_index),
       type: 'line',
       smooth: true,
       symbol: 'circle',
@@ -287,13 +248,13 @@ const initTrendChart = () => {
           type: 'linear',
           x: 0, y: 0, x2: 1, y2: 0,
           colorStops: [
-            { offset: 0, color: '#3b82f6' },
-            { offset: 1, color: '#06b6d4' }
+            { offset: 0, color: '#ef4444' },
+            { offset: 1, color: '#f97316' }
           ]
         }
       },
       itemStyle: {
-        color: '#3b82f6',
+        color: '#ef4444',
         borderWidth: 2,
         borderColor: '#0a0f1c'
       },
@@ -302,8 +263,8 @@ const initTrendChart = () => {
           type: 'linear', 
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
-            { offset: 1, color: 'rgba(59, 130, 246, 0.02)' }
+            { offset: 0, color: 'rgba(239, 68, 68, 0.3)' },
+            { offset: 1, color: 'rgba(239, 68, 68, 0.02)' }
           ]
         }
       }
@@ -313,98 +274,51 @@ const initTrendChart = () => {
   trendChart.setOption(option)
 }
 
-// 初始化饼图
-const initPieChart = () => {
-  if (!pieChartRef.value) return
-  
-  if (pieChart) {
-    pieChart.dispose()
-  }
-  pieChart = echarts.init(pieChartRef.value)
-  
-  const option = {
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: 'rgba(17, 24, 39, 0.9)',
-      borderColor: 'rgba(75, 85, 99, 0.4)',
-      textStyle: { color: '#f9fafb' }
-    },
-    legend: {
-      orient: 'vertical',
-      right: '5%',
-      top: 'center', 
-      textStyle: { color: '#9ca3af' }
-    },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['40%', '50%'],
-      avoidLabelOverlap: false,
-      itemStyle: {
-        borderRadius: 8,
-        borderColor: '#0a0f1c',
-        borderWidth: 2
-      },
-      label: {
-        show: false
-      },
-      emphasis: {
-        label: {
-          show: true,
-          fontSize: 14,
-          fontWeight: 'bold',
-          color: '#f9fafb'
-        }
-      },
-      data: [
-        { value: riskDistribution.value.low, name: t('risk.low'), itemStyle: { color: '#10b981' } },
-        { value: riskDistribution.value.medium, name: t('risk.medium'), itemStyle: { color: '#f59e0b' } },
-        { value: riskDistribution.value.high, name: t('risk.high'), itemStyle: { color: '#ef4444' } },
-        { value: riskDistribution.value.critical, name: t('risk.critical'), itemStyle: { color: '#7c3aed' } }
-      ]
-    }]
-  }
-  
-  pieChart.setOption(option)
-}
-
 // 监听语言变化
 watch(() => languageStore.locale, () => {
   nextTick(() => {
     initTrendChart()
-    initPieChart()
   })
 })
-
-// 获取风险分布数据
-const fetchRiskDistribution = async () => {
-  try {
-    const res = await dashboardApi.getRiskDistribution()
-    riskDistribution.value = res.data || { low: 0, medium: 0, high: 0, critical: 0 }
-    nextTick(() => {
-      initPieChart()
-    })
-  } catch (error) {
-    console.error('Failed to fetch risk distribution:', error)
-  }
-}
 
 /**
  * 刷新数据
  */
 const refreshData = async () => {
+  const days = trendPeriod.value === '30d' ? 30 : 7
   await store.fetchDashboard()
-  await fetchRiskDistribution()
   nextTick(() => {
     initTrendChart()
   })
 }
 
+// 监听时间周期变化
+watch(trendPeriod, async () => {
+  const days = trendPeriod.value === '30d' ? 30 : 7
+  try {
+    const res = await dashboardApi.getDashboard(days)
+    if (res.data && res.data.trend) {
+      trend.value = res.data.trend
+    }
+  } catch (error) {
+    console.error('Failed to fetch trend data:', error)
+  }
+  nextTick(() => {
+    initTrendChart()
+  })
+})
+
+// 监听趋势数据变化
+watch(trend, () => {
+  nextTick(() => {
+    initTrendChart()
+  })
+}, { deep: true })
+
 // 自动刷新
 let refreshInterval: number
 const resizeHandler = () => {
   trendChart?.resize()
-  pieChart?.resize()
 }
 
 onMounted(() => {
@@ -418,7 +332,6 @@ onUnmounted(() => {
   clearInterval(refreshInterval)
   window.removeEventListener('resize', resizeHandler)
   trendChart?.dispose()
-  pieChart?.dispose()
 })
 </script>
 
@@ -569,7 +482,7 @@ onUnmounted(() => {
 }
 
 .stat-icon.red {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
@@ -599,23 +512,19 @@ onUnmounted(() => {
 
 /* 风险卡片特殊样式 */
 .risk-card {
-  border-left: 4px solid;
+  /* 移除了左侧边框 */
 }
 
 .risk-card.low {
-  border-left-color: #10b981;
 }
 
 .risk-card.medium {
-  border-left-color: #f59e0b;
 }
 
 .risk-card.high {
-  border-left-color: #ef4444;
 }
 
 .risk-card.critical {
-  border-left-color: #7c3aed;
 }
 
 .risk-indicator-bar {
@@ -651,6 +560,10 @@ onUnmounted(() => {
   color: var(--accent-success);
 }
 
+.stat-trend.down {
+  color: var(--accent-danger);
+}
+
 .stat-alert {
   display: flex;
   align-items: center;
@@ -673,7 +586,7 @@ onUnmounted(() => {
 /* 图表区域 */
 .charts-section {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 32px;
 }
@@ -707,110 +620,51 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.chart-container {
-  height: 300px;
-}
-
-/* 警报区域 */
-.alerts-section {
-  background: var(--bg-card);
+/* 自定义时间选择器样式 */
+.chart-header :deep(.el-radio-group) {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 4px;
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 24px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-header h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+.chart-header :deep(.el-radio-button) {
   margin: 0;
 }
 
-.section-header h3 :deep(svg) {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.alerts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: rgba(17, 24, 39, 0.5);
-  border-radius: 12px;
-  border-left: 3px solid transparent;
-  transition: all 0.3s ease;
-}
-
-.alert-item:hover {
-  background: rgba(17, 24, 39, 0.8);
-}
-
-.alert-item.high {
-  border-left-color: #ef4444;
-}
-
-.alert-item.medium {
-  border-left-color: #f59e0b;
-}
-
-.alert-item.low {
-  border-left-color: #10b981;
-}
-
-.alert-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  flex-shrink: 0;
-}
-
-.alert-icon :deep(svg) {
-  width: 20px;
-  height: 20px;
-}
-
-.alert-content {
-  flex: 1;
-}
-
-.alert-title {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.alert-desc {
-  font-size: 13px;
+.chart-header :deep(.el-radio-button__inner) {
+  border: none;
+  background: transparent;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  box-shadow: none;
 }
 
-.alert-time {
-  font-size: 12px;
-  color: var(--text-muted);
+.chart-header :deep(.el-radio-button__inner:hover) {
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.chart-header :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.chart-header :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.chart-container {
+  height: 300px;
 }
 
 /* 响应式 */

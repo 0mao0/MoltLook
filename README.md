@@ -1,5 +1,5 @@
 # 虾看看 (MoltLook) - 社区观察站 / Community Observer
-
+![alt text](frontPage.png)
 [中文](#中文) | [English](#english)
 
 ---
@@ -7,15 +7,15 @@
 <a name="中文"></a>
 ## 中文说明
 
-“虾看看” (MoltLook) 是一个针对 Moltbook 社区的自动化观测与分析系统。它能够实时采集社区帖子，通过图算法识别 Agent 社区结构，并利用 LLM (DeepSeek) 分析潜在的风险言论。
+网址：http://124.221.238.70:8080/
 
-![alt text](image.png)
+“虾看看” (MoltLook) 是一个针对 Moltbook 社区的自动化观测与分析系统。它能够实时采集社区帖子，通过图算法识别 Agent 社区结构，并利用 LLM (DeepSeek) 分析潜在的风险言论。
 
 ### 功能特性
 
 - **实时帖子流监控**: 自动采集并展示最新的社区动态，支持风险等级筛选。
-- **Agent 行为画像**: 分析 Agent 的发帖活跃度、阴谋指数、风险等级及社交关系。
-- **交互式网络图**: 可视化展示 Agent 之间的互动关系与社区聚类。
+- **Agent行为画像**: 分析 Agent 的发帖活跃度、阴谋指数、风险等级及社交关系。
+- **交互式网络图**: 可视化展示 Agent 之间的互动关系与社区聚类。（下一阶段实现）
 - **风险预警**: 自动识别高风险/极高风险言论，并进行统计预警。
 - **数据持久化**: 支持 SQLite 数据存储，并具备风险分级的数据留存策略。
 
@@ -30,13 +30,15 @@
 <a name="english"></a>
 ## English Description
 
-"Xia Kan Kan" (MoltLook) is an automated observation and analysis system for the Moltbook community. It collects community posts in real-time, identifies Agent community structures through graph algorithms, and uses LLM (DeepSeek) to analyze potential risky discourse.
+WebSite：http://124.221.238.70:8080/
+
+MoltLook is an automated observation and analysis system for the Moltbook community. It collects community posts in real-time, identifies Agent community structures through graph algorithms, and uses LLM (DeepSeek) to analyze potential risky discourse.
 
 ### Features
 
 - **Real-time Post Monitoring**: Automatically collect and display the latest community dynamics, supporting risk level filtering.
 - **Agent Profiling**: Analyze Agent posting activity, conspiracy index, risk level, and social relationships.
-- **Interactive Network Graph**: Visualize interaction relationships and community clustering between Agents.
+- **Interactive Network Graph**: Visualize interaction relationships and community clustering between Agents.（Todo）
 - **Risk Alerting**: Automatically identify high-risk/critical-risk speech and provide statistical warnings.
 - **Data Persistence**: Supports SQLite data storage with risk-based data retention policies.
 

@@ -15,7 +15,7 @@ const api = axios.create({
 
 // Dashboard API
 export const dashboardApi = {
-  getDashboard: () => api.get('/dashboard/stats'),
+  getDashboard: (days?: number) => api.get('/dashboard/stats', { params: days ? { days } : undefined }),
   getRealtimeStats: () => api.get('/stats/realtime'),
   getRiskDistribution: () => api.get('/dashboard/risk-distribution')
 }

@@ -70,6 +70,14 @@ class AgentResponse(AgentBase):
         from_attributes = True
 
 
+class AgentListResponse(BaseModel):
+    """Agent 列表响应模型"""
+    agents: List[AgentResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class AgentProfile(AgentResponse):
     """Agent 详细档案"""
     recent_posts: List[PostResponse] = []

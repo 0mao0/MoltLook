@@ -30,5 +30,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.codebuddy/
 *.swp
 *.swo

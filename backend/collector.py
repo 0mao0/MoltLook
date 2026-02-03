@@ -17,7 +17,7 @@ from app.services.feature_extractor import feature_extractor
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -87,12 +87,15 @@ class Collector:
             (post_data["id"],)
         )
         if await cursor.fetchone():
+            logger.debug(f"Post {post_data['id'][:8]}... already exists, skipping")
             return False
+        
+        logger.debug(f"Saving new post {post_data['id'][:8]}..., created_at={post_data['created_at']}")
         
         # 确保有 URL 和标题
         url = post_data.get("url")
-        if not url:
-            # 修正 URL 格式：从 posts/ 改为 post/
+        if not url or "pages not found" in url or "moltbook.com/posts/" in url:
+            # 修正 URL 格式：Moltbook 官方帖子的正确路径通常是 /post/{id} 而不是 /posts/{id}
             url = f"https://www.moltbook.com/post/{post_data['id']}"
             
         title = post_data.get("title")
@@ -168,6 +171,10 @@ class Collector:
             )
         )
         
+        # 更新 Agent 的风险等级和平均阴谋指数
+        await self.update_agent_risk_level(db, post_data["author_id"])
+        
+        logger.debug(f"Successfully saved post {post_data['id'][:8]}...")
         return True
     
     async def save_interaction(
@@ -220,6 +227,79 @@ class Collector:
         except Exception as e:
             logger.error(f"Error cleaning low/medium posts: {e}")
     
+    async def update_agent_risk_level(self, db: aiosqlite.Connection, agent_id: str):
+        """
+        更新 Agent 的风险等级和平均阴谋指数
+        
+        根据该 Agent 最近 7 天的帖子计算平均阴谋指数和风险等级
+        """
+        try:
+            # 获取最近 7 天的帖子统计
+            seven_days_ago = int(time.time()) - (7 * 24 * 60 * 60)
+            
+            cursor = await db.execute(
+                """
+                SELECT 
+                    AVG(conspiracy_score) as avg_score,
+                    COUNT(*) as post_count,
+                    COUNT(CASE WHEN risk_level = 'high' THEN 1 END) as high_count,
+                    COUNT(CASE WHEN risk_level = 'critical' THEN 1 END) as critical_count
+                FROM posts 
+                WHERE author_id = ? AND created_at > ?
+                """,
+                (agent_id, seven_days_ago)
+            )
+            row = await cursor.fetchone()
+            
+            if not row or row[1] == 0:
+                # 没有最近帖子，保持原样
+                return
+            
+            avg_score = row[0] or 0
+            post_count = row[1]
+            high_count = row[2] or 0
+            critical_count = row[3] or 0
+            
+            # 计算风险等级
+            risk_level = 'low'
+            
+            # 优先使用帖子风险等级
+            if critical_count > 0:
+                risk_level = 'critical'
+            elif high_count > 0:
+                # 如果有高风险帖子，根据比例判断
+                if high_count >= post_count * 0.5:
+                    risk_level = 'critical'
+                elif high_count >= post_count * 0.3:
+                    risk_level = 'high'
+                else:
+                    risk_level = 'medium'
+            else:
+                # 没有高风险帖子，根据平均阴谋指数判断
+                if avg_score >= 7:
+                    risk_level = 'critical'
+                elif avg_score >= 4:
+                    risk_level = 'high'
+                elif avg_score >= 2:
+                    risk_level = 'medium'
+                else:
+                    risk_level = 'low'
+            
+            # 更新 Agent 表
+            await db.execute(
+                """
+                UPDATE agents 
+                SET risk_level = ?, avg_conspiracy_7d = ?
+                WHERE id = ?
+                """,
+                (risk_level, round(avg_score, 2), agent_id)
+            )
+            
+            logger.debug(f"Updated agent {agent_id}: risk={risk_level}, avg_score={avg_score:.2f}")
+            
+        except Exception as e:
+            logger.error(f"Error updating agent risk level: {e}")
+    
     async def process_posts(self, posts: List[dict]) -> int:
         """
         处理帖子列表
@@ -246,24 +326,29 @@ class Collector:
                         
                         # 如果是回复，保存互动关系
                         if features.get("parent_id"):
-                            # 获取父帖作者
-                            cursor = await db.execute(
-                                "SELECT author_id FROM posts WHERE id = ?",
-                                (features["parent_id"],)
-                            )
-                            parent_row = await cursor.fetchone()
+                            target_author_id = features.get("parent_author_id")
                             
-                            if parent_row:
+                            if not target_author_id:
+                                # 如果特征提取没拿到，再查数据库
+                                cursor = await db.execute(
+                                    "SELECT author_id FROM posts WHERE id = ?",
+                                    (features["parent_id"],)
+                                )
+                                parent_row = await cursor.fetchone()
+                                if parent_row:
+                                    target_author_id = parent_row[0]
+                            
+                            if target_author_id:
                                 await self.save_interaction(
                                     db,
                                     features["author_id"],
-                                    parent_row[0],
+                                    target_author_id,
                                     features["id"],
                                     features["created_at"]
                                 )
                             else:
-                                # 父帖不在数据库中，可能是之前采集的
-                                logger.debug(f"Parent post not found: {features['parent_id']}")
+                                # 仍然没找到，可能是跨分区的回复或旧帖子
+                                logger.debug(f"Parent author not found for post {features['id']}")
                     
                 except Exception as e:
                     logger.error(f"Error processing post {post.get('id')}: {e}")
@@ -271,6 +356,9 @@ class Collector:
             
             if new_count > 0:
                 await self.cleanup_low_medium_posts(db)
+            
+            # 显式提交所有更改
+            await db.commit()
         
         return new_count
     
@@ -290,19 +378,16 @@ class Collector:
                     await db.execute("PRAGMA busy_timeout = 5000;")
                     state = await self.get_collection_state(db)
                 
-                last_seen_id = state["last_seen_id"]
-                
-                # 获取帖子
+                # 获取帖子（不使用 after 参数，因为 API 的 after 参数不可靠）
                 posts = await self.api.get_posts(
                     sort="new",
-                    limit=settings.BATCH_SIZE,
-                    after=last_seen_id
+                    limit=settings.BATCH_SIZE
                 )
                 
                 if posts:
                     logger.info(f"Fetched {len(posts)} posts")
                     
-                    # 处理帖子
+                    # 处理帖子（save_post 方法会自动过滤已存在的帖子）
                     new_count = await self.process_posts(posts)
                     logger.info(f"Saved {new_count} new posts")
                     

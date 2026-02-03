@@ -25,7 +25,7 @@
               </div>
             </div>
             <div class="risk-indicator-bar">
-              <div class="risk-level" style="width: 100%; background: #10b981;"></div>
+              <div class="risk-level" style="width: 100%; background: rgb(16, 185, 129);"></div>
             </div>
           </div>
 
@@ -41,7 +41,7 @@
               </div>
             </div>
             <div class="risk-indicator-bar">
-              <div class="risk-level" style="width: 100%; background: #f59e0b;"></div>
+              <div class="risk-level" style="width: 100%; background: rgb(245, 158, 11);"></div>
             </div>
           </div>
 
@@ -57,7 +57,7 @@
               </div>
             </div>
             <div class="risk-indicator-bar">
-              <div class="risk-level" style="width: 100%; background: #ef4444;"></div>
+              <div class="risk-level" style="width: 100%; background: rgb(239, 68, 68);"></div>
             </div>
           </div>
 
@@ -73,7 +73,7 @@
               </div>
             </div>
             <div class="risk-indicator-bar">
-              <div class="risk-level" style="width: 100%; background: #7c3aed;"></div>
+              <div class="risk-level" style="width: 100%; background: rgb(124, 58, 237);"></div>
             </div>
           </div>
         </div>
@@ -97,15 +97,12 @@
             </div>
             
             <div 
-              v-for="agent in filteredAgents" 
+              v-for="agent in paginatedAgents" 
               :key="agent.id" 
               class="table-row"
             >
               <div class="table-cell name-cell">
                 <div class="agent-name">
-                  <el-avatar :size="32" class="agent-avatar">
-                    {{ getAvatarText(agent) }}
-                  </el-avatar>
                   <span>{{ getDisplayName(agent) }}</span>
                 </div>
               </div>
@@ -129,110 +126,27 @@
               </div>
             </div>
           </div>
+          
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="currentPage"
+              :page-size="pageSize"
+              :total="totalAgents"
+              layout="prev, pager, next, jumper"
+              :background="true"
+              @current-change="handlePageChange"
+            />
+          </div>
         </div>
       </template>
     </template>
   </div>
 
-  <el-dialog
-    v-model="detailDialogVisible"
-    :title="$t('agents.detailTitle')"
-    width="720px"
-    destroy-on-close
-  >
-    <div v-if="detailLoading" class="detail-loading">
-      <el-skeleton :rows="6" animated />
-    </div>
-    <div v-else-if="selectedAgent" class="agent-detail">
-      <div class="detail-header">
-        <el-avatar :size="48" class="agent-avatar">
-          {{ getAvatarText(selectedAgent) }}
-        </el-avatar>
-        <div class="detail-title">
-          <div class="detail-name">{{ getDisplayName(selectedAgent) }}</div>
-          <div class="detail-id">{{ selectedAgent.id }}</div>
-        </div>
-      </div>
-      
-      <div class="detail-card">
-        <el-descriptions :column="2" border class="detail-stats">
-          <el-descriptions-item :label="$t('common.riskLevel')">
-            <el-tag :type="getRiskType(selectedAgent.risk_level)" effect="dark">
-              {{ getRiskLabel(selectedAgent.risk_level) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('dashboard.avgConspiracy')">
-            {{ (selectedAgent.avg_conspiracy_7d || 0).toFixed(1) }}/10
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.posts')">
-            {{ selectedAgent.post_count || 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.replies')">
-            {{ selectedAgent.reply_count || 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.beReplied')">
-            {{ selectedAgent.be_replied_count || 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.community')">
-            {{ selectedAgent.community_id ?? '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.firstSeen')">
-            {{ formatTime(selectedAgent.first_seen) }}
-          </el-descriptions-item>
-          <el-descriptions-item :label="$t('common.lastActive')">
-            {{ formatTime(selectedAgent.last_active) }}
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
-
-      <div v-if="selectedAgent.description" class="detail-card detail-section">
-        <div class="section-title">{{ $t('common.description') }}</div>
-        <div class="section-content">{{ selectedAgent.description }}</div>
-      </div>
-
-      <div class="detail-card detail-section">
-        <div class="section-title">
-          {{ $t('common.recentPosts') }}
-          <el-tag v-if="highRiskPosts.length" type="danger" size="small" effect="dark" style="margin-left: 8px">
-            {{ $t('agents.highRiskCount', { count: highRiskPosts.length }) }}
-          </el-tag>
-        </div>
-        <div v-if="selectedAgent.recent_posts && selectedAgent.recent_posts.length" class="recent-posts">
-          <div 
-            v-for="post in selectedAgent.recent_posts" 
-            :key="post.id" 
-            class="recent-post-item"
-            :class="getPostRiskLevel(post)"
-          >
-            <div class="post-item-content">{{ post.content }}</div>
-            <div class="post-item-footer">
-              <span class="post-item-time">{{ formatTime(post.created_at) }}</span>
-              <div class="post-item-badges">
-                <span class="post-item-badge risk" :class="getPostRiskLevel(post)">
-                  {{ getRiskLabel(getPostRiskLevel(post)) }}
-                </span>
-                <span class="post-item-badge score">
-                  {{ $t('common.score') }} {{ (post.conspiracy_score || 0).toFixed(1) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-detail">{{ $t('agents.noPosts') }}</div>
-      </div>
-
-      <div class="detail-card detail-section">
-        <div class="section-title">{{ $t('common.connections') }}</div>
-        <div v-if="selectedAgent.connections?.length" class="connections">
-          <div v-for="item in selectedAgent.connections" :key="item.agent_id" class="connection-item">
-            <span class="connection-name">{{ item.agent_id }}</span>
-            <span class="connection-count">{{ item.count }}</span>
-          </div>
-        </div>
-        <div v-else class="empty-detail">{{ $t('agents.noConnections') }}</div>
-      </div>
-    </div>
-  </el-dialog>
+  <AgentDetail
+    v-model:visible="detailDialogVisible"
+    :agent="selectedAgent"
+    :loading="detailLoading"
+  />
 </template>
 
 <script setup lang="ts">
@@ -244,7 +158,12 @@ import {
   CircleCheck, 
   Warning, 
   CircleClose, 
-  WarningFilled 
+  WarningFilled,
+  TrendCharts,
+  Document,
+  ChatLineRound,
+  Connection,
+  Box
 } from '@element-plus/icons-vue'
 import { useDataStore } from '@/stores/data'
 import { useLanguageStore } from '@/stores/language'
@@ -252,6 +171,7 @@ import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { agentsApi } from '@/api'
 import { riskLabels } from '@/locales'
+import AgentDetail from '@/components/AgentDetail.vue'
 
 const { t } = useI18n()
 const languageStore = useLanguageStore()
@@ -275,18 +195,67 @@ const detailDialogVisible = ref(false)
 const selectedAgent = ref<any>(null)
 const detailLoading = ref(false)
 const riskFilter = ref('')
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalAgents = ref(0)
 let refreshInterval: number | undefined
 
 /**
+ * 直接使用后端返回的 Agent 列表（后端分页）
+ */
+const paginatedAgents = computed(() => {
+  return agents.value
+})
+
+/**
  * 根据风险等级过滤后的 Agent 列表
+ * 注意：由于 setRiskFilter 已经调用后端 API 获取过滤后的数据，
+ * 所以这里直接返回 validAgents.value 即可
  */
 const filteredAgents = computed(() => {
-  if (!riskFilter.value) return validAgents.value
-  return validAgents.value.filter(agent => {
-    const level = getAgentRiskLevel(agent)
-    return level === riskFilter.value
-  })
+  return agents.value
 })
+
+/**
+ * 处理分页变化
+ * @param page 当前页码
+ */
+const handlePageChange = async (page: number) => {
+  currentPage.value = page
+  await loadAgentsForPage(page)
+}
+
+/**
+ * 加载指定页的 Agent 数据
+ * @param page 页码
+ */
+const loadAgentsForPage = async (page: number) => {
+  try {
+    const params: any = {
+      page: page,
+      page_size: pageSize.value
+    }
+    
+    if (riskFilter.value) {
+      params.risk_level = riskFilter.value
+    }
+    
+    const res = await agentsApi.getAgents(params)
+    const data = res.data
+    
+    // 处理新的响应格式 { agents: [], total: 0, page: 1, page_size: 10 }
+    if (data && data.agents && Array.isArray(data.agents)) {
+      agents.value = data.agents.filter((item: any) => item && item.id)
+      totalAgents.value = data.total || 0
+    } else if (Array.isArray(data)) {
+      // 兼容旧格式
+      agents.value = data.filter((item: any) => item && item.id)
+      totalAgents.value = data.length
+    }
+  } catch (error) {
+    console.error('Failed to load agents for page:', page, error)
+  }
+}
 
 /**
  * 当前选中 Agent 的高风险帖子
@@ -363,15 +332,6 @@ const getDisplayName = (agent: any) => {
 }
 
 /**
- * 获取 Agent 头像展示文字（名称首字母）
- * @param agent Agent 对象
- */
-const getAvatarText = (agent: any) => {
-  const displayName = getDisplayName(agent)
-  return displayName.charAt(0) || '?'
-}
-
-/**
  * 获取风险等级对应的 Element Plus 标签类型
  * @param level 风险等级
  */
@@ -430,6 +390,17 @@ const fetchRiskStats = async () => {
 }
 
 /**
+ * 根据 ID 获取 Agent 名称
+ * @param id Agent ID
+ */
+const getAgentNameById = (id: string) => {
+  if (!id) return t('common.unknown')
+  const agent = validAgents.value.find(a => a.id === id)
+  if (agent) return getDisplayName(agent)
+  return composeAgentName(id)
+}
+
+/**
  * 查看 Agent 详情信息
  * @param agent Agent 对象
  */
@@ -452,7 +423,7 @@ const viewAgentDetail = async (agent: any) => {
  * 刷新 Agent 列表及统计数据
  */
 const refreshAgents = async () => {
-  await store.fetchAgents()
+  await loadAgentsForPage(currentPage.value)
   await fetchRiskStats()
 }
 
@@ -460,8 +431,15 @@ const refreshAgents = async () => {
  * 设置风险等级过滤条件（点击卡片切换）
  * @param level 风险等级
  */
-const setRiskFilter = (level: string) => {
-  riskFilter.value = riskFilter.value === level ? '' : level
+const setRiskFilter = async (level: string) => {
+  if (riskFilter.value === level) {
+    riskFilter.value = ''
+  } else {
+    riskFilter.value = level
+  }
+  // 重置到第一页并重新加载
+  currentPage.value = 1
+  await loadAgentsForPage(1)
 }
 
 /**
@@ -543,8 +521,8 @@ onUnmounted(() => {
 /* 统计卡片网格 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   margin-bottom: 32px;
 }
 
@@ -553,7 +531,7 @@ onUnmounted(() => {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -561,14 +539,13 @@ onUnmounted(() => {
 
 .stat-card:hover {
   transform: translateY(-4px);
-  border-color: var(--border-glow);
+  border-color: var(--accent-primary);
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
 }
 
 .stat-card.active {
   border-color: var(--accent-primary);
-  background: rgba(59, 130, 246, 0.05);
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
 
 .card-glow {
@@ -584,19 +561,17 @@ onUnmounted(() => {
 .card-content {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--accent-primary);
   flex-shrink: 0;
 }
 
@@ -620,11 +595,6 @@ onUnmounted(() => {
   color: #7c3aed;
 }
 
-.stat-icon :deep(svg) {
-  width: 32px;
-  height: 32px;
-}
-
 .stat-info {
   display: flex;
   flex-direction: column;
@@ -632,37 +602,16 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-/* 风险卡片特殊样式 */
-.risk-card {
-  border-left: 4px solid;
-}
-
-.risk-card.low {
-  border-left-color: #10b981;
-}
-
-.risk-card.medium {
-  border-left-color: #f59e0b;
-}
-
-.risk-card.high {
-  border-left-color: #ef4444;
-}
-
-.risk-card.critical {
-  border-left-color: #7c3aed;
 }
 
 .risk-indicator-bar {
@@ -674,24 +623,9 @@ onUnmounted(() => {
 
 .risk-level {
   height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
   border-radius: 2px;
   transition: width 0.5s ease;
-}
-
-.risk-card.low .risk-level {
-  background: #10b981;
-}
-
-.risk-card.medium .risk-level {
-  background: #f59e0b;
-}
-
-.risk-card.high .risk-level {
-  background: #ef4444;
-}
-
-.risk-card.critical .risk-level {
-  background: #7c3aed;
 }
 
 /* 响应式适配 */
@@ -829,6 +763,7 @@ onUnmounted(() => {
   display: flex;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  justify-content: center;
 }
 
 .table-row {
@@ -854,33 +789,33 @@ onUnmounted(() => {
 }
 
 .name-cell {
-  flex: 1.2;
-  min-width: 180px;
+  flex: 1;
+  min-width: 140px;
 }
 
 .risk-cell {
-  width: 100px;
-  flex-shrink: 0;
+  flex: 0.8;
+  min-width: 100px;
 }
 
 .score-cell {
-  width: 130px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 100px;
 }
 
 .count-cell {
-  width: 80px;
-  flex-shrink: 0;
+  flex: 0.6;
+  min-width: 80px;
 }
 
 .time-cell {
-  width: 160px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 140px;
 }
 
 .action-cell {
-  width: 80px;
-  flex-shrink: 0;
+  flex: 0.6;
+  min-width: 80px;
 }
 
 .agent-name {
@@ -889,10 +824,83 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-.agent-avatar {
-  background: var(--accent-primary);
-  color: white;
-  font-weight: 600;
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
+}
+
+.pagination-container :deep(.el-pagination) {
+  display: flex;
+  gap: 4px;
+}
+
+.pagination-container :deep(.el-pagination.is-background .el-pager li) {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-weight: 500;
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+}
+
+.pagination-container :deep(.el-pagination.is-background .el-pager li:hover) {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+}
+
+.pagination-container :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.pagination-container :deep(.el-pagination button) {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-weight: 500;
+  min-width: 32px;
+  height: 32px;
+}
+
+.pagination-container :deep(.el-pagination button:hover) {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+}
+
+.pagination-container :deep(.el-pagination button:disabled) {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  opacity: 0.5;
+}
+
+.pagination-container :deep(.el-pagination__jump) {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.pagination-container :deep(.el-pagination__jump .el-input__wrapper) {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: none;
+  width: 50px;
+}
+
+.pagination-container :deep(.el-pagination__jump .el-input__wrapper:hover) {
+  border-color: var(--accent-primary);
+}
+
+.pagination-container :deep(.el-pagination__jump .el-input__inner) {
+  color: var(--text-primary);
+  text-align: center;
 }
 
 .detail-loading {
@@ -905,177 +913,175 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+/* 弹框头部 */
 .detail-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+
+.detail-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.detail-avatar :deep(svg) {
+  width: 20px;
+  height: 20px;
 }
 
 .detail-title {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .detail-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary);
-}
-
-.detail-id {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.detail-stats {
-  width: 100%;
-}
-
-.detail-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.detail-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.section-content {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.recent-posts {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.recent-post-item {
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(31, 41, 55, 0.4);
-  border: 1px solid rgba(75, 85, 99, 0.2);
-  transition: all 0.2s ease;
-}
-
-.recent-post-item:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(31, 41, 55, 0.6);
-}
-
-.recent-post-item.critical, .recent-post-item.high {
-  border-left: 4px solid #ef4444;
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.recent-post-item.medium {
-  border-left: 4px solid #f59e0b;
-}
-
-.recent-post-item.low {
-  border-left: 4px solid #10b981;
-}
-
-.post-item-content {
-  font-size: 14px;
-  color: var(--text-primary);
-  line-height: 1.6;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.post-item-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.post-item-time {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.post-item-badges {
-  display: flex;
-  gap: 8px;
-}
-
-.post-item-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.post-item-badge.risk.critical, .post-item-badge.risk.high {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-}
-
-.post-item-badge.risk.medium {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-}
-
-.post-item-badge.risk.low {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-}
-
-.post-item-badge.score {
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.connections {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
-}
-
-.connection-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-.connection-name {
+  color: #f9fafb;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.connection-count {
-  font-weight: 600;
-  color: var(--accent-primary);
+.detail-id {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
 }
 
-.empty-detail {
-  font-size: 13px;
+.detail-risk-badge {
+  flex-shrink: 0;
+}
+
+/* 统计卡片 */
+.detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.card-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.stats-card {
+  padding: 12px 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+.stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+}
+
+.stat-icon.conspiracy {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.stat-icon.posts {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.stat-icon.replies {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.stat-icon.community {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.stat-content {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 11px;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .score-bar {

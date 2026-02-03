@@ -14,11 +14,11 @@ export const useDataStore = defineStore('data', () => {
   const agents = ref<any[]>([])
   const loading = ref(false)
   const lastUpdate = ref(0)
+  const trend = ref<any[]>([])
 
   // Getters
   // 后端 /api/dashboard/stats 直接返回 stats 对象，不是嵌套结构
   const stats = computed(() => dashboard.value || null)
-  const trend = computed(() => dashboard.value?.trend || [])
   const networkData = computed(() => network.value || { nodes: [], edges: [] })
   const isLoading = computed(() => loading.value)
 
@@ -28,6 +28,9 @@ export const useDataStore = defineStore('data', () => {
     try {
       const res = await dashboardApi.getDashboard()
       dashboard.value = res.data
+      if (res.data && res.data.trend) {
+        trend.value = res.data.trend
+      }
       lastUpdate.value = Date.now()
     } catch (error) {
       console.error('Failed to fetch dashboard:', error)
@@ -102,8 +105,17 @@ export const useDataStore = defineStore('data', () => {
         risk_level: params?.riskLevel
       })
       const data = res.data
-      if (Array.isArray(data)) {
-        agents.value = data.filter(item => item && item.id)
+      
+      // 处理新的响应格式 { agents: [], total: 0, page: 1, page_size: 10 }
+      if (data && data.agents && Array.isArray(data.agents)) {
+        agents.value = data.agents.filter((item: any) => item && item.id)
+        // 如果需要总数，可以存储起来
+        if (data.total !== undefined) {
+          // 可以在需要时使用 data.total
+        }
+      } else if (Array.isArray(data)) {
+        // 兼容旧格式
+        agents.value = data.filter((item: any) => item && item.id)
       } else {
         agents.value = []
       }

@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import { 
   DataLine, 
   Document, 
-  Share, 
   UserFilled,
   Monitor,
   Switch
@@ -20,8 +19,7 @@ const activeMenu = computed(() => route.path)
 const menuItems = [
   { path: '/dashboard', name: 'dashboard', labelKey: 'menu.dashboard', icon: DataLine },
   { path: '/feed', name: 'feed', labelKey: 'menu.feed', icon: Document },
-  { path: '/agents', name: 'agents', labelKey: 'menu.agents', icon: UserFilled },
-  { path: '/network', name: 'network', labelKey: 'menu.network', icon: Share },
+  { path: '/agents', name: 'agents', labelKey: 'menu.agents', icon: UserFilled }
 ]
 
 const toggleLanguage = () => {

@@ -78,13 +78,40 @@ async def get_dashboard():
 
 
 @router.get("/dashboard/stats")
-async def get_dashboard_stats():
+async def get_dashboard_stats(days: int = 7):
     """
     获取仪表盘统计（简化版）
+    
+    Args:
+        days: 趋势数据天数 (7 或 30)
     """
     try:
         async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             await db.execute("PRAGMA busy_timeout = 5000;")
+            
+            # 24小时内帖子数
+            cursor = await db.execute("""
+                SELECT COUNT(*) FROM posts 
+                WHERE created_at > strftime('%s', 'now', '-1 day')
+            """)
+            posts_24h = (await cursor.fetchone())[0]
+            
+            # 昨日帖子数（24-48小时前）
+            cursor = await db.execute("""
+                SELECT COUNT(*) FROM posts 
+                WHERE created_at > strftime('%s', 'now', '-2 days')
+                AND created_at <= strftime('%s', 'now', '-1 day')
+            """)
+            posts_yesterday = (await cursor.fetchone())[0]
+            
+            # 计算今日增长率
+            if posts_yesterday > 0:
+                growth_rate = round((posts_24h - posts_yesterday) / posts_yesterday * 100, 1)
+            elif posts_24h > 0:
+                growth_rate = 100.0
+            else:
+                growth_rate = 0.0
+            
             # 总帖子数
             cursor = await db.execute("SELECT COUNT(*) FROM posts")
             total_posts = (await cursor.fetchone())[0]
@@ -97,43 +124,67 @@ async def get_dashboard_stats():
             cursor = await db.execute("SELECT COUNT(*) FROM interactions")
             total_connections = (await cursor.fetchone())[0]
             
-            # 计算风险等级
+            # 计算风险等级：基于高风险帖子占总数的比例
+            # 统计所有的高风险帖子数（不限制时间）
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM posts WHERE risk_level='high' OR risk_level='critical'"
             )
             high_risk_count = (await cursor.fetchone())[0]
             
-            if high_risk_count > 50:
+            # 统计 24 小时内的高风险帖子数（用于显示最近趋势）
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM posts WHERE (risk_level='high' OR risk_level='critical') AND created_at > strftime('%s', 'now', '-1 day')"
+            )
+            high_risk_count_24h = (await cursor.fetchone())[0]
+            
+            if total_posts > 0:
+                high_risk_ratio = high_risk_count / total_posts
+            else:
+                high_risk_ratio = 0
+            
+            if high_risk_ratio > 0.3:
                 risk_level = "high"
-            elif high_risk_count > 10:
+            elif high_risk_ratio > 0.15:
                 risk_level = "medium"
             else:
                 risk_level = "low"
             
-            # 获取最近7天趋势
-            cursor = await db.execute("""
+            # 获取最近N天趋势（每日风险指数）
+            days_limit = max(7, min(30, days))
+            cursor = await db.execute(f"""
                 SELECT date(datetime(created_at, 'unixepoch')) as date,
-                       COUNT(*) as count,
-                       AVG(conspiracy_score) as avg_score
+                       COUNT(*) as total_count,
+                       SUM(CASE WHEN risk_level='high' OR risk_level='critical' THEN conspiracy_score ELSE 0 END) as risk_score_sum
                 FROM posts 
-                WHERE created_at > strftime('%s', 'now', '-7 days')
+                WHERE created_at > strftime('%s', 'now', '-{days_limit} days')
                 GROUP BY date
                 ORDER BY date
             """)
             trend_rows = await cursor.fetchall()
             
-            trend = [
-                {"date": r[0], "count": r[1], "avg_score": round(r[2] or 0, 2)}
-                for r in trend_rows
-            ]
+            trend = []
+            for r in trend_rows:
+                total_count = r[1] or 0
+                risk_score_sum = r[2] or 0
+                # 计算当日风险指数 E = C / D
+                risk_index = round(risk_score_sum / total_count, 2) if total_count > 0 else 0
+                trend.append({
+                    "date": r[0], 
+                    "total_count": total_count,
+                    "risk_score_sum": risk_score_sum,
+                    "risk_index": risk_index
+                })
             
             return {
                 "total_posts": total_posts,
+                "posts_24h": posts_24h,
                 "active_agents": total_agents,
                 "total_connections": total_connections,
                 "risk_level": risk_level,
                 "danger_count": high_risk_count,
+                "high_risk_ratio": round(high_risk_ratio * 100, 2),
                 "avg_risk": 0.62,
+                "growth_rate": growth_rate,
                 "trend": trend
             }
             

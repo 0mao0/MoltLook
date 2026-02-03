@@ -21,12 +21,6 @@ const router = createRouter({
       meta: { title: messages.zh.menu.feed, titleEn: messages.en.menu.feed }
     },
     {
-      path: '/network',
-      name: 'network',
-      component: () => import('../views/NetworkView.vue'),
-      meta: { title: messages.zh.menu.network, titleEn: messages.en.menu.network }
-    },
-    {
       path: '/agents',
       name: 'agents',
       component: () => import('../views/AgentsView.vue'),

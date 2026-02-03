@@ -45,16 +45,31 @@ class FeatureExtractor:
         
         # 5. 提取作者信息
         author = post.get("author") or {}
-        # 如果 author 是字典，优先使用 id，其次是 name，最后是 unknown
+        # 如果 author 是字典，优先使用 username/display_name，其次是 name，最后是 id
         if isinstance(author, dict):
             author_id = author.get("id") or author.get("name") or "unknown"
-            # 尝试提取并存储 name，这里只提取 ID，name 存储逻辑在 Collector.save_post 中
-            # 但我们需要把 name 传递出去
-            author_name = author.get("name") or author_id
+            # 优先使用 username，其次是 display_name，再次是 name，最后是 id 的前 8 位
+            author_name = author.get("username") or author.get("display_name") or author.get("name")
+            if not author_name or author_name == author_id:
+                # 如果 name 和 ID 相同（通常是 UUID），或者没有 name，尝试使用其他字段
+                author_name = author.get("username") or author.get("handle") or author_id
         else:
             # 如果 author 只是字符串（旧 API 可能返回字符串 ID）
             author_id = str(author)
             author_name = author_id
+
+        # 5.1 提取父帖作者信息（如果存在）
+        parent_author_id = None
+        parent_post = post.get("parent_post")
+        if isinstance(parent_post, dict):
+            parent_author = parent_post.get("author")
+            if isinstance(parent_author, dict):
+                parent_author_id = parent_author.get("id") or parent_author.get("name")
+            elif parent_author:
+                parent_author_id = str(parent_author)
+        
+        if not parent_author_id and post.get("parent_author_id"):
+            parent_author_id = post.get("parent_author_id")
 
         # 6. 提取 submolt（可能是字典或字符串）
         submolt_data = post.get("submolt") or "general"
@@ -91,7 +106,8 @@ class FeatureExtractor:
             "summary": None,
             "url": post.get("url"),
             "title": post.get("title"),
-            "author_name": author_name
+            "author_name": author_name,
+            "parent_author_id": parent_author_id
         }
     
     def _calculate_conspiracy_score(self, content: str) -> int:

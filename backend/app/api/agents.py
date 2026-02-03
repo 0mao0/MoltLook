@@ -6,12 +6,12 @@ from typing import List, Optional
 import aiosqlite
 
 from app.core.config import settings
-from app.models.schemas import AgentResponse, AgentProfile
+from app.models.schemas import AgentResponse, AgentProfile, AgentListResponse
 
 router = APIRouter(prefix="/api", tags=["agents"])
 
 
-@router.get("/agents", response_model=List[AgentResponse])
+@router.get("/agents", response_model=AgentListResponse)
 async def get_agents(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -24,7 +24,7 @@ async def get_agents(
     Args:
         page: 页码
         page_size: 每页数量限制
-        risk_level: 按风险等级筛选 (low, medium, high)
+        risk_level: 按风险等级筛选 (low, medium, high, critical)
         community_id: 按社区筛选
     """
     try:
@@ -35,25 +35,35 @@ async def get_agents(
             # 计算偏移量
             offset = (page - 1) * page_size
             
-            query = """
+            # 构建查询条件
+            where_conditions = []
+            params = []
+            
+            if risk_level and risk_level.strip():
+                where_conditions.append("risk_level = ?")
+                params.append(risk_level)
+            
+            if community_id is not None:
+                where_conditions.append("community_id = ?")
+                params.append(community_id)
+            
+            where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
+            
+            # 获取总数
+            count_query = f"SELECT COUNT(*) FROM agents {where_clause}"
+            cursor = await db.execute(count_query, params)
+            total_count = (await cursor.fetchone())[0]
+            
+            # 获取分页数据
+            query = f"""
                 SELECT 
                     id, name, description, first_seen, last_active,
                     post_count, reply_count, be_replied_count,
                     pagerank_score, community_id, risk_level, avg_conspiracy_7d
                 FROM agents
-                WHERE 1=1
+                {where_clause}
+                ORDER BY pagerank_score DESC LIMIT ? OFFSET ?
             """
-            params = []
-            
-            if risk_level and risk_level.strip():
-                query += " AND risk_level = ?"
-                params.append(risk_level)
-            
-            if community_id is not None:
-                query += " AND community_id = ?"
-                params.append(community_id)
-            
-            query += " ORDER BY pagerank_score DESC LIMIT ? OFFSET ?"
             params.extend([page_size, offset])
             
             cursor = await db.execute(query, params)
@@ -76,7 +86,12 @@ async def get_agents(
                     avg_conspiracy_7d=row["avg_conspiracy_7d"]
                 ))
             
-            return agents
+            return AgentListResponse(
+                agents=agents,
+                total=total_count,
+                page=page,
+                page_size=page_size
+            )
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -111,7 +126,7 @@ async def get_agent(agent_id: str):
             # 最近 20 条发言
             cursor = await db.execute(
                 """
-                SELECT id, content, conspiracy_score, sentiment, created_at, risk_level
+                SELECT id, author_id, content, content_length, conspiracy_score, sentiment, created_at, risk_level, fetched_at
                 FROM posts 
                 WHERE author_id = ? 
                 ORDER BY created_at DESC 
@@ -151,11 +166,14 @@ async def get_agent(agent_id: str):
                 recent_posts=[
                     {
                         "id": p["id"],
+                        "author_id": agent_id,
                         "content": p["content"],
+                        "content_length": p["content_length"],
                         "conspiracy_score": p["conspiracy_score"],
                         "sentiment": p["sentiment"],
                         "created_at": p["created_at"],
-                        "risk_level": p["risk_level"]
+                        "risk_level": p["risk_level"],
+                        "fetched_at": p["fetched_at"]
                     }
                     for p in posts
                 ],
