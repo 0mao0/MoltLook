@@ -1,0 +1,23 @@
+# FastAPI
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database
+aiosqlite==0.19.0
+
+# HTTP Client
+aiohttp==3.9.1
+
+# Data Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# CORS
+python-multipart==0.0.6
+
+# Optional: For advanced sentiment analysis
+# textblob==0.17.1
+# snownlp==0.12.3
