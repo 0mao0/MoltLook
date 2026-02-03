@@ -25,8 +25,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 更新 AgentsView、FeedView 等视图组件
 - 更新 README.md 文档
 
-### Removed
-- 移除 check_db.py 文件
-
-## [v0.0.03] - 2026-01-20
-- 初始版本发布
