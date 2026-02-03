@@ -33,10 +33,11 @@ class Collector:
     
     async def init_db(self):
         """初始化数据库"""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
             # 启用 WAL 模式
             await db.execute("PRAGMA journal_mode=WAL;")
             await db.execute("PRAGMA synchronous=NORMAL;")
+            await db.execute("PRAGMA busy_timeout = 5000;")
             await db.commit()
             logger.info("Database initialized")
     
@@ -228,8 +229,9 @@ class Collector:
         """
         new_count = 0
         
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
             await db.execute("PRAGMA journal_mode=WAL;")
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             for post in posts:
                 try:
@@ -279,7 +281,7 @@ class Collector:
         while self.running:
             try:
                 # 获取采集状态
-                async with aiosqlite.connect(self.db_path) as db:
+                async with aiosqlite.connect(self.db_path, timeout=30) as db:
                     state = await self.get_collection_state(db)
                 
                 last_seen_id = state["last_seen_id"]
@@ -300,7 +302,7 @@ class Collector:
                     
                     # 更新采集状态
                     last_post_id = posts[-1].get("id")
-                    async with aiosqlite.connect(self.db_path) as db:
+                    async with aiosqlite.connect(self.db_path, timeout=30) as db:
                         await self.update_collection_state(
                             db, 
                             last_seen_id=last_post_id,

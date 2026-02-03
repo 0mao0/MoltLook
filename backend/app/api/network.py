@@ -24,8 +24,9 @@ async def get_network(
         community_id: 筛选特定社区
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             # 构建查询
             query = """
@@ -94,7 +95,8 @@ async def get_communities():
     获取社区列表
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             cursor = await db.execute("""
                 SELECT 
                     community_id,

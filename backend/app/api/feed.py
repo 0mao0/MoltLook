@@ -30,8 +30,9 @@ async def get_feed(
         risk_level: 风险等级筛选
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             # 计算偏移量
             offset = (page - 1) * page_size

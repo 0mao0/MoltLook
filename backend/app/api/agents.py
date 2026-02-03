@@ -28,8 +28,9 @@ async def get_agents(
         community_id: 按社区筛选
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             # 计算偏移量
             offset = (page - 1) * page_size
@@ -87,8 +88,9 @@ async def get_agent(agent_id: str):
     获取 Agent 详细档案
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
             
             # 基础信息
             cursor = await db.execute(
@@ -175,7 +177,8 @@ async def get_agents_risk_stats():
     获取 Agent 风险分布统计
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             cursor = await db.execute("""
                 SELECT 
                     COALESCE(risk_level, 'low') as level,

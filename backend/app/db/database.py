@@ -17,10 +17,11 @@ class Database:
     async def connect(self) -> aiosqlite.Connection:
         """建立数据库连接"""
         if self._connection is None:
-            self._connection = await aiosqlite.connect(self.db_path)
+            self._connection = await aiosqlite.connect(self.db_path, timeout=30)
             # 启用 WAL 模式支持并发读写
             await self._connection.execute("PRAGMA journal_mode=WAL;")
             await self._connection.execute("PRAGMA synchronous=NORMAL;")
+            await self._connection.execute("PRAGMA busy_timeout = 5000;")
             # 启用外键约束
             await self._connection.execute("PRAGMA foreign_keys=ON;")
         return self._connection

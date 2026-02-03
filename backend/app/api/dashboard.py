@@ -20,7 +20,8 @@ async def get_dashboard():
     返回最近24小时统计数据和7天趋势
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 最近 24h 统计
             cursor = await db.execute("""
                 SELECT 
@@ -82,7 +83,8 @@ async def get_dashboard_stats():
     获取仪表盘统计（简化版）
     """
     try:
-        async with aiosqlite.connect(settings.DB_PATH) as db:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
             # 总帖子数
             cursor = await db.execute("SELECT COUNT(*) FROM posts")
             total_posts = (await cursor.fetchone())[0]
