@@ -1,4 +1,5 @@
-# MoltLook(虾看看) - Moltbook Community Observer / Moltbook社区观察站
+# MoltLook (虾看看) 
+- Moltbook Community Observer / Moltbook社区观察站
 
 ![alt text](frontPage.png)
 

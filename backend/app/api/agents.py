@@ -54,6 +54,12 @@ async def get_agents(
             cursor = await db.execute(count_query, params)
             total_count = (await cursor.fetchone())[0]
             
+            # 构建排序条件：高风险和极高风险按阴谋指数、发帖数、回复数排序
+            if risk_level in ('high', 'critical'):
+                order_clause = "ORDER BY avg_conspiracy_7d DESC, post_count DESC, reply_count DESC"
+            else:
+                order_clause = "ORDER BY pagerank_score DESC"
+            
             # 获取分页数据
             query = f"""
                 SELECT 
@@ -62,7 +68,7 @@ async def get_agents(
                     pagerank_score, community_id, risk_level, avg_conspiracy_7d
                 FROM agents
                 {where_clause}
-                ORDER BY pagerank_score DESC LIMIT ? OFFSET ?
+                {order_clause} LIMIT ? OFFSET ?
             """
             params.extend([page_size, offset])
             

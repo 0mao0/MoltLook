@@ -53,7 +53,12 @@ class Settings:
     AI_API_KEY = os.getenv("AI_API_KEY", "")
     
     # 数据库配置
-    DB_PATH = BASE_DIR / "moltlook.db"
+    if (Path("/app/data/moltlook.db")).exists():
+        DB_PATH = Path("/app/data/moltlook.db")
+    elif (BASE_DIR / "data" / "moltlook.db").exists():
+        DB_PATH = BASE_DIR / "data" / "moltlook.db"
+    else:
+        DB_PATH = BASE_DIR / "moltlook.db"
     
     # 采集配置
     FETCH_INTERVAL = 60  # 秒

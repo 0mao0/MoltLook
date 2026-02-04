@@ -106,19 +106,29 @@
                   <span>{{ getDisplayName(agent) }}</span>
                 </div>
               </div>
-              <div class="table-cell risk-cell">
-                <el-tag :type="getRiskType(agent.risk_level)" effect="dark" size="small">
-                  {{ getRiskLabel(agent.risk_level) }}
-                </el-tag>
-              </div>
-              <div class="table-cell score-cell">
-                <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (agent.avg_conspiracy_7d || 0) * 10 + '%' }"></div>
-                  <span class="score-text">{{ (agent.avg_conspiracy_7d || 0).toFixed(1) }}/10</span>
+              <div class="info-row">
+                <div class="table-cell risk-cell">
+                  <span class="info-label">{{ $t('common.riskLevel') }}:</span>
+                  <el-tag :type="getRiskType(agent.risk_level)" effect="dark" size="small">
+                    {{ getRiskLabel(agent.risk_level) }}
+                  </el-tag>
+                </div>
+                <div class="table-cell score-cell">
+                  <span class="info-label">{{ $t('common.score') }}:</span>
+                  <div class="score-bar">
+                    <div class="score-fill" :style="{ width: (agent.avg_conspiracy_7d || 0) * 10 + '%' }"></div>
+                    <span class="score-text">{{ (agent.avg_conspiracy_7d || 0).toFixed(1) }}/10</span>
+                  </div>
+                </div>
+                <div class="table-cell count-cell">
+                  <span class="info-label">{{ $t('common.posts') }}:</span>
+                  <span>{{ agent.post_count || 0 }}</span>
                 </div>
               </div>
-              <div class="table-cell count-cell">{{ agent.post_count || 0 }}</div>
-              <div class="table-cell time-cell">{{ formatTime(agent.last_active) }}</div>
+              <div class="table-cell time-cell">
+                <span class="info-label">{{ $t('common.lastActive') }}:</span>
+                <span class="time-value">{{ formatTime(agent.last_active) }}</span>
+              </div>
               <div class="table-cell action-cell">
                 <button type="button" class="action-link" @click="viewAgentDetail(agent)">
                   {{ $t('common.details') }}
@@ -824,6 +834,24 @@ onUnmounted(() => {
   gap: 10px;
 }
 
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+@media (min-width: 769px) {
+  .info-label {
+    display: none;
+  }
+}
+
 .pagination-container {
   display: flex;
   justify-content: center;
@@ -1143,61 +1171,117 @@ onUnmounted(() => {
     font-size: 20px;
   }
   
+  .table-card {
+    padding: 12px;
+  }
+  
+  .agent-table {
+    border: none;
+    border-radius: 0;
+  }
+  
   .table-header-row {
     display: none;
   }
   
   .table-row {
     flex-direction: column;
-    padding: 12px;
-    gap: 8px;
+    padding: 16px;
+    gap: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    transition: all 0.3s ease;
+  }
+  
+  .table-row:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  }
+  
+  .table-row:last-child {
+    border-bottom: 1px solid var(--border-color);
   }
   
   .table-cell {
     width: 100% !important;
-    padding: 4px 0;
+    padding: 0;
+    display: flex;
+    align-items: flex-start;
   }
   
-  .name-cell::before {
-    content: var(--label-name);
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-right: 8px;
+  .name-cell {
+    display: flex;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+    margin-bottom: 4px;
   }
   
-  .risk-cell::before {
-    content: var(--label-risk);
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-right: 8px;
+  .name-cell .agent-name span {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
   }
   
-  .score-cell::before {
-    content: var(--label-score);
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-right: 8px;
+  .info-row {
+    gap: 8px;
   }
   
-  .count-cell::before {
-    content: var(--label-posts);
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-right: 8px;
+  .info-label {
+    display: block;
   }
   
-  .time-cell::before {
-    content: var(--label-time);
-    color: var(--text-secondary);
-    font-size: 12px;
-    margin-right: 8px;
+  .risk-cell {
+    order: 1;
   }
   
-  .action-cell::before {
-    content: var(--label-action);
-    color: var(--text-secondary);
+  .score-cell {
+    order: 2;
+  }
+  
+  .score-bar {
+    width: 80px;
+  }
+  
+  .count-cell {
+    order: 3;
+  }
+  
+  .time-cell {
+    order: 4;
+    width: 100%;
+  }
+  
+  .time-value {
     font-size: 12px;
-    margin-right: 8px;
+    color: var(--text-muted);
+  }
+  
+  .action-cell {
+    order: 5;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(75, 85, 99, 0.3);
+  }
+  
+  .action-link {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2));
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  .action-link:hover {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: white;
   }
 }
 </style>

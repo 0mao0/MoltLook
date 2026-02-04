@@ -369,23 +369,42 @@ img, svg {
   }
   
   .top-header {
-    padding: 0 16px;
+    padding: 12px 16px;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: stretch;
+    gap: 10px;
+    height: auto;
   }
 
   .header-left {
     width: 100%;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .brand {
+    width: 100%;
+    justify-content: center;
   }
 
   .top-tabs {
     width: 100%;
     overflow-x: auto;
-    justify-content: flex-start;
+    justify-content: space-between;
+    padding: 8px;
+  }
+
+  .tab-item {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

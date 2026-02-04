@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: moltlook-backend-api
     volumes:
-      - ./moltlook.db:/app/moltlook.db
+      - ./data:/app/data
       - ./.env:/app/.env
     environment:
       - PYTHONPATH=/app
@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: moltlook-backend-collector
     volumes:
-      - ./moltlook.db:/app/moltlook.db
+      - ./data:/app/data
       - ./.env:/app/.env
     environment:
       - PYTHONPATH=/app
