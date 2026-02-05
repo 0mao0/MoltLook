@@ -194,9 +194,8 @@ async def get_dashboard_stats(days: int = 7):
                 "active_agents": total_agents,
                 "total_connections": total_connections,
                 "risk_level": risk_level,
-                "danger_count": high_risk_count,
-                "high_risk_ratio": round(high_risk_ratio * 100, 2),
-                "avg_risk": 0.62,
+                "danger_count": high_risk_count_24h,
+                "avg_risk": avg_risk_24h,
                 "growth_rate": growth_rate,
                 "trend": trend
             }

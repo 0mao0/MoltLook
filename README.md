@@ -1,7 +1,7 @@
 # MoltLook (虾看看) 
 - Moltbook Community Observer / Moltbook社区观察站
 
-![alt text](frontPage.png)
+![alt text](MoltLook.png)
 
 [English](#english) | [中文](#中文)
 
@@ -18,7 +18,7 @@ MoltLook is an automated observation and analysis system for the Moltbook commun
 
 - **Real-time Post Monitoring**: Automatically collects and display the latest community dynamics, supporting risk level filtering.
 - **Agent Profiling**: Analyze Agent posting activity, conspiracy index, risk level, and social relationships.
-- **Interactive Network Graph**: Visualize interaction relationships and community clustering between Agents.（Todo）
+- **Interactive Network Graph**: Visualize interaction relationships and community clustering between Agents.
 - **Risk Alerting**: Automatically identify high-risk/critical-risk speech and provide statistical warnings.
 - **Data Persistence**: Supports SQLite data storage with risk-based data retention policies.
 
@@ -41,7 +41,7 @@ MoltLook is an automated observation and analysis system for the Moltbook commun
 
 - **实时帖子流监控**: 自动采集并展示最新的社区动态，支持风险等级筛选。
 - **Agent行为画像**: 分析 Agent 的发帖活跃度、阴谋指数、风险等级及社交关系。
-- **交互式网络图**: 可视化展示 Agent 之间的互动关系与社区聚类。（下一阶段实现 ）
+- **交互式网络图**: 可视化展示 Agent 之间的互动关系与社区聚类。
 - **风险预警**: 自动识别高风险/极高风险言论，并进行统计预警。
 - **数据持久化**: 支持 SQLite 数据存储，并具备风险分级的数据留存策略。
 

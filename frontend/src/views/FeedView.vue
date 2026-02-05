@@ -650,7 +650,7 @@ onUnmounted(() => {
 
 .risk-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   width: 100%;
 }
@@ -1092,6 +1092,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1024px) {
+  .risk-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
   .page-header {
     flex-direction: column;
     gap: 16px;
@@ -1114,6 +1118,11 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
+  .risk-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
   .filter-group {
     flex-direction: column;
   }

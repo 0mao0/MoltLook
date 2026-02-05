@@ -3,7 +3,7 @@
     :model-value="visible"
     @update:model-value="$emit('update:visible', $event)"
     :title="$t('agents.detailTitle')"
-    width="800px"
+    :width="dialogWidth"
     destroy-on-close
     class="agent-detail-dialog"
   >
@@ -212,6 +212,17 @@ const emit = defineEmits<{
 const languageStore = useLanguageStore()
 
 /**
+ * 对话框宽度 - 根据屏幕宽度动态调整
+ */
+const dialogWidth = computed(() => {
+  if (typeof window === 'undefined') return '800px'
+  const screenWidth = window.innerWidth
+  if (screenWidth <= 480) return '95vw'
+  if (screenWidth <= 768) return '90vw'
+  return '800px'
+})
+
+/**
  * 判断字符串是否为 UUID 格式
  */
 const isUuid = (value: string): boolean => {
@@ -413,11 +424,15 @@ const handleAnalyze = async () => {
 
 .detail-risk-badge {
   flex-shrink: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
 }
 
 .ai-analyze-btn {
   flex-shrink: 0;
   margin-left: 8px;
+  height: 32px;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
   border: none !important;
   font-weight: 600;
@@ -770,6 +785,11 @@ const handleAnalyze = async () => {
   .detail-header {
     flex-direction: column;
     text-align: center;
+    gap: 12px;
+  }
+  
+  .detail-title {
+    align-items: center;
   }
   
   .detail-risk-badge {
@@ -777,11 +797,64 @@ const handleAnalyze = async () => {
     display: flex;
     justify-content: center;
   }
+  
+  .ai-analyze-btn {
+    width: 100%;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .info-value {
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .stat-item {
+    padding: 12px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stat-icon :deep(svg) {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+  }
+  
+  .post-item-content {
+    font-size: 13px;
+  }
+  
+  .post-item-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .post-item-badges {
+    flex-wrap: wrap;
   }
 }
 </style>
@@ -812,6 +885,32 @@ const handleAnalyze = async () => {
   max-height: 75vh;
   overflow-y: auto;
   background: var(--bg-secondary) !important;
+}
+
+@media (max-width: 768px) {
+  .el-dialog.agent-detail-dialog .el-dialog__header {
+    padding: 12px 16px;
+  }
+  
+  .el-dialog.agent-detail-dialog .el-dialog__body {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .el-dialog.agent-detail-dialog .el-dialog__header {
+    padding: 12px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .el-dialog.agent-detail-dialog .el-dialog__title {
+    font-size: 14px;
+  }
+  
+  .el-dialog.agent-detail-dialog .el-dialog__body {
+    padding: 12px;
+  }
 }
 
 .el-dialog.agent-detail-dialog .el-dialog__body::-webkit-scrollbar {
