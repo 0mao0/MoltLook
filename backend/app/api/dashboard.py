@@ -22,6 +22,11 @@ async def get_dashboard():
     try:
         async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             await db.execute("PRAGMA busy_timeout = 5000;")
+            
+            # 历史总帖子数（包括已删除的）
+            cursor = await db.execute("SELECT total_posts_count FROM collection_state WHERE id = 1")
+            total_posts_count = (await cursor.fetchone())[0] or 0
+            
             # 最近 24h 统计
             cursor = await db.execute("""
                 SELECT 
@@ -38,6 +43,12 @@ async def get_dashboard():
             active_agents = row[1] or 0
             avg_risk = round(row[2] or 0, 2)
             danger_count = row[3] or 0
+            
+            # 如果历史总数为0，使用当前数量初始化
+            if total_posts_count == 0 and total_posts > 0:
+                total_posts_count = total_posts
+                await db.execute("UPDATE collection_state SET total_posts_count = ? WHERE id = 1", (total_posts_count,))
+                await db.commit()
             
             # 计算风险等级：基于最近7天平均阴谋指数
             # avg_risk 就是最近24小时内的平均阴谋指数
@@ -58,7 +69,7 @@ async def get_dashboard():
                 risk_level = "low"
             
             stats = DashboardStats(
-                total_posts=total_posts,
+                total_posts=total_posts_count,
                 active_agents=active_agents,
                 avg_risk=avg_risk,
                 danger_count=danger_count,
@@ -122,9 +133,19 @@ async def get_dashboard_stats(days: int = 7):
             else:
                 growth_rate = 0.0
             
-            # 总帖子数
+            # 历史总帖子数（包括已删除的）
+            cursor = await db.execute("SELECT total_posts_count FROM collection_state WHERE id = 1")
+            total_posts_count = (await cursor.fetchone())[0] or 0
+            
+            # 当前数据库中的帖子数
             cursor = await db.execute("SELECT COUNT(*) FROM posts")
-            total_posts = (await cursor.fetchone())[0]
+            current_posts = (await cursor.fetchone())[0]
+            
+            # 如果历史总数为0，使用当前数量初始化
+            if total_posts_count == 0 and current_posts > 0:
+                total_posts_count = current_posts
+                await db.execute("UPDATE collection_state SET total_posts_count = ? WHERE id = 1", (total_posts_count,))
+                await db.commit()
             
             # 总 Agent 数
             cursor = await db.execute("SELECT COUNT(*) FROM agents")
@@ -163,6 +184,7 @@ async def get_dashboard_stats(days: int = 7):
                 risk_level = "low"
             
             # 获取最近N天趋势（每日风险指数）
+            # 排除当天不完整数据，只显示完整天数的数据
             days_limit = max(7, min(30, days))
             cursor = await db.execute(f"""
                 SELECT date(datetime(created_at, 'unixepoch')) as date,
@@ -170,6 +192,7 @@ async def get_dashboard_stats(days: int = 7):
                        SUM(CASE WHEN risk_level='high' OR risk_level='critical' THEN conspiracy_score ELSE 0 END) as risk_score_sum
                 FROM posts 
                 WHERE created_at > strftime('%s', 'now', '-{days_limit} days')
+                AND created_at < strftime('%s', 'now', 'start of day')
                 GROUP BY date
                 ORDER BY date
             """)
@@ -189,7 +212,7 @@ async def get_dashboard_stats(days: int = 7):
                 })
             
             return {
-                "total_posts": total_posts,
+                "total_posts": total_posts_count,
                 "posts_24h": posts_24h,
                 "active_agents": total_agents,
                 "total_connections": total_connections,
@@ -212,9 +235,20 @@ async def get_realtime_stats():
     try:
         async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             await db.execute("PRAGMA busy_timeout = 5000;")
-            # 总帖子数
+            
+            # 历史总帖子数（包括已删除的）
+            cursor = await db.execute("SELECT total_posts_count FROM collection_state WHERE id = 1")
+            total_posts_count = (await cursor.fetchone())[0] or 0
+            
+            # 当前数据库中的帖子数
             cursor = await db.execute("SELECT COUNT(*) FROM posts")
-            total_posts = (await cursor.fetchone())[0]
+            current_posts = (await cursor.fetchone())[0]
+            
+            # 如果历史总数为0，使用当前数量初始化
+            if total_posts_count == 0 and current_posts > 0:
+                total_posts_count = current_posts
+                await db.execute("UPDATE collection_state SET total_posts_count = ? WHERE id = 1", (total_posts_count,))
+                await db.commit()
             
             # 总 Agent 数
             cursor = await db.execute("SELECT COUNT(*) FROM agents")
@@ -231,7 +265,7 @@ async def get_realtime_stats():
             llm_queue_length = (await cursor.fetchone())[0]
             
             return {
-                "total_posts": total_posts,
+                "total_posts": total_posts_count,
                 "total_agents": total_agents,
                 "high_risk_posts": high_risk_posts,
                 "llm_queue_length": llm_queue_length,
@@ -340,12 +374,13 @@ async def get_dashboard_network_graph():
             nodes = []
             for r in agents_with_interactions:
                 agent_id = r["id"]
-                outgoing = next((i["weight"] for i in interactions if i["source_id"] == agent_id), 0)
-                incoming = next((i["weight"] for i in interactions if i["target_id"] == agent_id), 0)
+                outgoing = sum(i["weight"] for i in interactions if i["source_id"] == agent_id)
+                incoming = sum(i["weight"] for i in interactions if i["target_id"] == agent_id)
                 total_interactions = outgoing + incoming
                 
                 # 计算危险指数（0-100）
-                conspiracy_score = float(r["avg_conspiracy_7d"] or 0) * 10
+                # avg_conspiracy_7d 的范围是 0-10，需要归一化到 0-5
+                conspiracy_score = float(r["avg_conspiracy_7d"] or 0) / 2 * 10
                 pagerank_score = float(r["pagerank_score"] or 0) * 50
                 interaction_score = min(20, (0 if total_interactions == 0 else total_interactions ** 0.5 * 3))
                 danger_index = round(conspiracy_score + pagerank_score + interaction_score, 1)
@@ -361,8 +396,18 @@ async def get_dashboard_network_graph():
                 else:
                     color = "#22c55e"  # 绿色 - 低风险
                 
-                # 根据危险指数设置节点大小（15-60）
-                size = max(15, min(60, int(danger_index * 0.5 + 15)))
+                # 根据危险指数设置节点大小（10-60）
+                # 使用指数缩放，让低风险 Agent 节点更小
+                if danger_index < 25:
+                    size = 10 + (danger_index / 25) * 15  # 10-25
+                elif danger_index < 50:
+                    size = 25 + ((danger_index - 25) / 25) * 15  # 25-40
+                elif danger_index < 70:
+                    size = 40 + ((danger_index - 50) / 20) * 10  # 40-50
+                else:
+                    size = 50 + ((danger_index - 70) / 30) * 10  # 50-60
+                
+                size = int(min(60, max(10, size)))
                 
                 # 合成名称
                 name = r["name"] or agent_id

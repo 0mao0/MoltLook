@@ -219,7 +219,8 @@ class Database:
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 last_seen_id TEXT,
                 last_fetch_time INTEGER DEFAULT 0,
-                total_posts INTEGER DEFAULT 0
+                total_posts INTEGER DEFAULT 0,
+                total_posts_count INTEGER DEFAULT 0
             )
         """)
         

@@ -44,16 +44,17 @@ class Collector:
     async def get_collection_state(self, db: aiosqlite.Connection) -> Dict[str, Any]:
         """获取采集状态"""
         cursor = await db.execute(
-            "SELECT last_seen_id, last_fetch_time, total_posts FROM collection_state WHERE id = 1"
+            "SELECT last_seen_id, last_fetch_time, total_posts, total_posts_count FROM collection_state WHERE id = 1"
         )
         row = await cursor.fetchone()
         if row:
             return {
                 "last_seen_id": row[0],
                 "last_fetch_time": row[1],
-                "total_posts": row[2]
+                "total_posts": row[2],
+                "total_posts_count": row[3] or 0
             }
-        return {"last_seen_id": None, "last_fetch_time": 0, "total_posts": 0}
+        return {"last_seen_id": None, "last_fetch_time": 0, "total_posts": 0, "total_posts_count": 0}
     
     async def update_collection_state(
         self, 
@@ -208,24 +209,38 @@ class Collector:
         except Exception as e:
             logger.error(f"Error saving interaction: {e}")
 
-    async def cleanup_low_medium_posts(self, db: aiosqlite.Connection):
+    async def cleanup_old_posts(self, db: aiosqlite.Connection):
         """
-        清理中低风险帖子，仅保留最新 1000 条
+        清理旧帖子，仅保留最新 1000 条
         """
         try:
-            await db.execute(
-                """
-                DELETE FROM posts
-                WHERE id IN (
-                    SELECT id FROM posts
-                    WHERE COALESCE(risk_level, 'low') IN ('low', 'medium')
-                    ORDER BY created_at DESC
-                    LIMIT -1 OFFSET 1000
+            # 获取当前总帖子数
+            cursor = await db.execute("SELECT COUNT(*) FROM posts")
+            current_count = (await cursor.fetchone())[0]
+            
+            if current_count > 1000:
+                # 删除超过1000条的旧帖子
+                await db.execute(
+                    """
+                    DELETE FROM posts
+                    WHERE id IN (
+                        SELECT id FROM posts
+                        ORDER BY created_at DESC
+                        LIMIT -1 OFFSET 1000
+                    )
+                    """
                 )
-                """
-            )
+                deleted_count = current_count - 1000
+                logger.info(f"Cleaned up {deleted_count} old posts, keeping latest 1000")
+                
+                # 更新历史总帖子数
+                await db.execute(
+                    "UPDATE collection_state SET total_posts_count = total_posts_count + ? WHERE id = 1",
+                    (deleted_count,)
+                )
+                await db.commit()
         except Exception as e:
-            logger.error(f"Error cleaning low/medium posts: {e}")
+            logger.error(f"Error cleaning old posts: {e}")
     
     async def update_agent_risk_level(self, db: aiosqlite.Connection, agent_id: str):
         """
@@ -355,7 +370,7 @@ class Collector:
                     continue
             
             if new_count > 0:
-                await self.cleanup_low_medium_posts(db)
+                await self.cleanup_old_posts(db)
             
             # 显式提交所有更改
             await db.commit()

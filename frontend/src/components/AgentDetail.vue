@@ -50,6 +50,15 @@
         <div class="card-glow"></div>
         <div class="stats-grid">
           <div class="stat-item">
+            <div class="stat-icon danger">
+              <el-icon><Warning /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ getDangerIndex(props.agent) }}/100</div>
+              <div class="stat-label">危险指数</div>
+            </div>
+          </div>
+          <div class="stat-item">
             <div class="stat-icon conspiracy">
               <el-icon><TrendCharts /></el-icon>
             </div>
@@ -174,7 +183,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { User, TrendCharts, Document, ChatLineRound, Connection, Box, MagicStick } from '@element-plus/icons-vue'
+import { User, TrendCharts, Document, ChatLineRound, Connection, Box, MagicStick, Warning } from '@element-plus/icons-vue'
 import { useLanguageStore } from '@/stores/language'
 import { riskLabels } from '@/locales'
 import { agentsApi } from '@/api'
@@ -291,6 +300,26 @@ const getRiskLevel = (agent: Agent): string => {
   if (score >= 4) return 'high'
   if (score >= 2) return 'medium'
   return 'low'
+}
+
+/**
+ * 计算 Agent 的危险指数（0-100）
+ * 危险指数 = 阴谋指数(50分) + 影响力(30分) + 互动数量(20分)
+ * @param agent Agent 对象
+ */
+const getDangerIndex = (agent: Agent): number => {
+  if (!agent) return 0
+  
+  const avg_conspiracy = Number(agent.avg_conspiracy_7d ?? 0)
+  const pagerank = Number(agent.pagerank_score ?? 0)
+  const post_count = Number(agent.post_count ?? 0)
+  
+  // avg_conspiracy_7d 的范围是 0-10，需要归一化到 0-5
+  const conspiracy_score = avg_conspiracy / 2 * 10
+  const pagerank_score = pagerank * 50
+  const interaction_score = Math.min(20, Math.sqrt(post_count) * 3)
+  
+  return Math.round(conspiracy_score + pagerank_score + interaction_score)
 }
 
 /**
@@ -457,7 +486,7 @@ const handleAnalyze = async () => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 
@@ -486,6 +515,11 @@ const handleAnalyze = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.stat-icon.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
 }
 
 .stat-icon.conspiracy {
@@ -634,6 +668,18 @@ const handleAnalyze = async () => {
   margin-bottom: 8px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .post-item-footer {

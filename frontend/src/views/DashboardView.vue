@@ -75,9 +75,7 @@
 
     <div class="dashboard-charts">
       <!-- 关系图 -->
-      <div class="chart-card">
-        <NetworkGraph />
-      </div>
+      <NetworkGraph />
       
       <!-- 趋势图 -->
       <div class="chart-card">
@@ -607,7 +605,7 @@ onUnmounted(() => {
 
 .dashboard-charts {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 32px;
 }
@@ -685,7 +683,11 @@ onUnmounted(() => {
 }
 
 .chart-container {
-  height: 300px;
+  height: 400px;
+}
+
+.network-graph-card {
+  height: 400px;
 }
 
 /* 响应式 */
@@ -693,21 +695,9 @@ onUnmounted(() => {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .dashboard-charts {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 1024px) {
-  .charts-section {
-    grid-template-columns: 1fr;
-  }
-  
-  .dashboard-charts {
-    grid-template-columns: 1fr;
-  }
-  
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }

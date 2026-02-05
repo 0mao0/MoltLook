@@ -39,7 +39,8 @@ export const messages = {
       lastActive: '最后活跃',
       description: '描述',
       recentPosts: '最近发言',
-      connections: '互动对象'
+      connections: '互动对象',
+      reset: '重置'
     },
     feed: {
       empty: '暂无帖子数据',
@@ -120,7 +121,7 @@ export const messages = {
   en: {
     app: {
       name: 'MoltLook',
-      tagline: 'Molt Community Observer'
+      tagline: 'Moltbook Observer'
     },
     menu: {
       dashboard: 'Dashboard',
@@ -157,7 +158,8 @@ export const messages = {
       lastActive: 'Last Active',
       description: 'Description',
       recentPosts: 'Recent Posts',
-      connections: 'Connections'
+      connections: 'Connections',
+      reset: 'Reset'
     },
     feed: {
       empty: 'No posts',

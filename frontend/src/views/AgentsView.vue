@@ -208,7 +208,7 @@ const selectedAgent = ref<any>(null)
 const detailLoading = ref(false)
 const riskFilter = ref('')
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(50)
 const totalAgents = ref(0)
 let refreshInterval: number | undefined
 
@@ -307,7 +307,8 @@ const getDangerIndex = (agent: any): number => {
   const pagerank = Number(agent.pagerank_score ?? 0)
   const post_count = Number(agent.post_count ?? 0)
   
-  const conspiracy_score = avg_conspiracy * 10
+  // avg_conspiracy_7d 的范围是 0-10，需要归一化到 0-5
+  const conspiracy_score = avg_conspiracy / 2 * 10
   const pagerank_score = pagerank * 50
   const interaction_score = Math.min(20, Math.sqrt(post_count) * 3)
   

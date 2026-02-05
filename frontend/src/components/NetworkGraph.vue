@@ -5,15 +5,26 @@
         <el-icon><Connection /></el-icon>
         <span>{{ $t('network.chartTitle') }}</span>
       </div>
-      <div class="graph-stats" v-if="graphData?.stats">
-        <span class="stat-item">
-          <el-icon><User /></el-icon>
-          {{ graphData.stats.total_agents }}
-        </span>
-        <span class="stat-item">
-          <el-icon><Link /></el-icon>
-          {{ graphData.stats.total_interactions }}
-        </span>
+      <div class="graph-header-right">
+        <div class="graph-stats" v-if="graphData?.stats">
+          <span class="stat-item">
+            <el-icon><User /></el-icon>
+            {{ graphData.stats.total_agents }}
+          </span>
+          <span class="stat-item">
+            <el-icon><Link /></el-icon>
+            {{ graphData.stats.total_interactions }}
+          </span>
+        </div>
+        <el-button
+          type="primary"
+          size="small"
+          :icon="RefreshRight"
+          @click="resetZoom"
+          class="reset-btn"
+        >
+          {{ $t('common.reset') || '重置' }}
+        </el-button>
       </div>
     </div>
     <div ref="graphRef" class="graph-container"></div>
@@ -27,7 +38,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { Connection, User, Link, Warning } from '@element-plus/icons-vue'
+import { Connection, User, Link, Warning, RefreshRight } from '@element-plus/icons-vue'
 import { dashboardApi } from '@/api'
 
 const graphRef = ref<HTMLElement>()
@@ -49,6 +60,13 @@ const initChart = () => {
   chart = echarts.init(graphRef.value)
   
   const option = {
+    grid: {
+      left: '0%',
+      right: '0%',
+      top: '0%',
+      bottom: '0%',
+      containLabel: true
+    },
     tooltip: {
       trigger: 'item',
       backgroundColor: 'rgba(17, 24, 39, 0.95)',
@@ -125,6 +143,14 @@ const initChart = () => {
   chart.setOption(option)
 }
 
+const resetZoom = () => {
+  if (chart) {
+    chart.dispatchAction({
+      type: 'restore'
+    })
+  }
+}
+
 const fetchData = async () => {
   try {
     loading.value = true
@@ -193,6 +219,12 @@ onUnmounted(() => {
   color: var(--accent-primary);
 }
 
+.graph-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .graph-stats {
   display: flex;
   gap: 12px;
@@ -212,6 +244,12 @@ onUnmounted(() => {
 .stat-item :deep(svg) {
   width: 12px;
   height: 12px;
+}
+
+.reset-btn {
+  padding: 4px 12px;
+  height: 24px;
+  font-size: 12px;
 }
 
 .graph-container {
