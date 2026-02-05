@@ -1,6 +1,6 @@
 # Environments
 .env
-.env.*
+.env*
 
 # Dependencies
 node_modules/
@@ -9,6 +9,7 @@ venv/
 # Build outputs
 dist/
 dist-ssr/
+.vite/
 
 # Python
 __pycache__/
@@ -16,6 +17,7 @@ __pycache__/
 
 # Database
 moltlook.db
+moltlook.db*
 
 # Logs
 *.log

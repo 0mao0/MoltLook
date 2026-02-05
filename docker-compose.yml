@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   backend-api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/0mao0/moltlook-backend:main
     container_name: moltlook-backend-api
     volumes:
       - ./data:/app/data
@@ -17,9 +15,7 @@ services:
     restart: always
 
   backend-collector:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/0mao0/moltlook-backend:main
     container_name: moltlook-backend-collector
     volumes:
       - ./data:/app/data
@@ -32,12 +28,19 @@ services:
       - backend-api
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/0mao0/moltlook-frontend:main
     container_name: moltlook-frontend
     ports:
       - "8080:80"
     restart: always
     depends_on:
       - backend-api
+
+  # Watchtower: 监控镜像更新并自动重启容器
+  watchtower:
+    image: containrrr/watchtower
+    container_name: moltlook-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 60 --cleanup --include-stopped
+    restart: always
