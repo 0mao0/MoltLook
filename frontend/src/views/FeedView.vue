@@ -224,6 +224,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { 
   Document, 
   Refresh, 
@@ -242,6 +243,7 @@ import { useI18n } from 'vue-i18n'
 import { translationApi, dashboardApi } from '@/api'
 import { submoltLabels, riskLabels } from '@/locales'
 
+const route = useRoute()
 const { t } = useI18n()
 const languageStore = useLanguageStore()
 const store = useDataStore()
@@ -522,6 +524,10 @@ const analyzePost = async (post: any) => {
 }
 
 onMounted(() => {
+  const riskParam = route.query.risk as string
+  if (riskParam && ['low', 'medium', 'high', 'critical'].includes(riskParam)) {
+    filters.value.riskLevel = riskParam
+  }
   refreshPosts()
   startAutoRefresh()
 })

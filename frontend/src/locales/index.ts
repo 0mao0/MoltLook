@@ -53,7 +53,9 @@ export const messages = {
       detailTitle: 'Agent 详情',
       highRiskCount: '{count} 条高风险',
       noPosts: '暂无发言记录',
-      noConnections: '暂无记录'
+      noConnections: '暂无记录',
+      aiAnalyze: 'AI分析此Robot',
+      aiAnalysisResult: 'AI 风险分析'
     },
     dashboard: {
       currentRiskLevel: '当前风险等级',
@@ -167,7 +169,9 @@ export const messages = {
       detailTitle: 'Agent Details',
       highRiskCount: '{count} high risk',
       noPosts: 'No recent posts',
-      noConnections: 'No records'
+      noConnections: 'No records',
+      aiAnalyze: 'AI Analyze',
+      aiAnalysisResult: 'AI Risk Analysis'
     },
     dashboard: {
       currentRiskLevel: 'Current Risk Level',

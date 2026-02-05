@@ -7,8 +7,24 @@ import aiosqlite
 
 from app.core.config import settings
 from app.models.schemas import AgentResponse, AgentProfile, AgentListResponse
+from app.services.qwen_analyzer import analyze_agent_risk
 
 router = APIRouter(prefix="/api", tags=["agents"])
+
+
+def compose_agent_name(id: str) -> str:
+    """
+    从 ID 中合成 Agent 展示名称
+    
+    Args:
+        id: Agent ID
+    """
+    parts = id.split('-')
+    suffix = parts[-2:] if len(parts) >= 2 else parts
+    suffix_str = '-'.join(suffix)
+    clean = ''.join(c for c in suffix_str if c.isalnum())
+    token = clean[:6] if len(clean) >= 6 else clean
+    return f"Agent-{token}"
 
 
 @router.get("/agents", response_model=AgentListResponse)
@@ -201,16 +217,19 @@ async def get_agent(agent_id: str):
 async def get_agents_risk_stats():
     """
     获取 Agent 风险分布统计
+    
+    基于 avg_conspiracy_7d 动态计算风险等级：
+    - critical: avg_conspiracy_7d >= 8
+    - high: 5 <= avg_conspiracy_7d < 8
+    - medium: 3 <= avg_conspiracy_7d < 5
+    - low: avg_conspiracy_7d < 3
     """
     try:
         async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             await db.execute("PRAGMA busy_timeout = 5000;")
+            
             cursor = await db.execute("""
-                SELECT 
-                    COALESCE(risk_level, 'low') as level,
-                    COUNT(*) as count
-                FROM agents 
-                GROUP BY level
+                SELECT avg_conspiracy_7d FROM agents
             """)
             rows = await cursor.fetchall()
             
@@ -222,12 +241,15 @@ async def get_agents_risk_stats():
             }
             
             for row in rows:
-                level = row[0]
-                count = row[1]
-                # 兼容大小写
-                level = level.lower() if level else 'low'
-                if level in distribution:
-                    distribution[level] = count
+                conspiracy = row[0] or 0
+                if conspiracy >= 8:
+                    distribution["critical"] += 1
+                elif conspiracy >= 5:
+                    distribution["high"] += 1
+                elif conspiracy >= 3:
+                    distribution["medium"] += 1
+                else:
+                    distribution["low"] += 1
             
             return distribution
             
@@ -281,6 +303,73 @@ async def get_risky_agents(
             
             return {"agents": agents}
             
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/agent/{agent_id}/analyze")
+async def analyze_agent(agent_id: str):
+    """
+    使用 Qwen3 AI 分析 Agent 的风险言论
+    
+    Args:
+        agent_id: Agent ID
+    """
+    try:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
+            
+            # 获取 Agent 基本信息
+            cursor = await db.execute(
+                """
+                SELECT id, name, risk_level, avg_conspiracy_7d, post_count
+                FROM agents WHERE id = ?
+                """,
+                (agent_id,)
+            )
+            agent = await cursor.fetchone()
+            
+            if not agent:
+                raise HTTPException(status_code=404, detail="Agent not found")
+            
+            # 获取最近发言
+            cursor = await db.execute(
+                """
+                SELECT content, conspiracy_score, created_at
+                FROM posts 
+                WHERE author_id = ? 
+                ORDER BY created_at DESC 
+                LIMIT 20
+                """,
+                (agent_id,)
+            )
+            posts = await cursor.fetchall()
+            
+            posts_data = [
+                {
+                    "content": row["content"],
+                    "conspiracy_score": row["conspiracy_score"]
+                }
+                for row in posts
+            ]
+            
+            agent_name = agent["name"] or compose_agent_name(agent_id)
+            
+            # 调用 AI 分析
+            analysis = await analyze_agent_risk(agent_name, posts_data)
+            
+            return {
+                "agent_id": agent_id,
+                "agent_name": agent_name,
+                "risk_level": agent["risk_level"],
+                "avg_conspiracy": agent["avg_conspiracy_7d"],
+                "post_count": agent["post_count"],
+                "analysis": analysis
+            }
+            
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 

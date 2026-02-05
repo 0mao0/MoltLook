@@ -19,7 +19,7 @@
       </div>
 
       <!-- 24小时帖子数 -->
-      <div class="stat-card">
+      <div class="stat-card" style="cursor: pointer" @click="router.push('/feed')">
         <div class="card-glow"></div>
         <div class="card-content">
           <div class="stat-icon blue">
@@ -38,7 +38,7 @@
       </div>
 
       <!-- 活跃 Agent -->
-      <div class="stat-card">
+      <div class="stat-card" style="cursor: pointer" @click="router.push('/agents')">
         <div class="card-glow"></div>
         <div class="card-content">
           <div class="stat-icon purple">
@@ -55,7 +55,7 @@
       </div>
 
       <!-- 高风险帖子 -->
-      <div class="stat-card danger-card">
+      <div class="stat-card danger-card" style="cursor: pointer" @click="router.push({ path: '/feed', query: { risk: 'high' } })">
         <div class="card-glow"></div>
         <div class="card-content">
           <div class="stat-icon red">
@@ -74,6 +74,11 @@
     </div>
 
     <div class="dashboard-charts">
+      <!-- 关系图 -->
+      <div class="chart-card">
+        <NetworkGraph />
+      </div>
+      
       <!-- 趋势图 -->
       <div class="chart-card">
         <div class="chart-header">
@@ -94,11 +99,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { useDataStore } from '@/stores/data'
 import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
+import NetworkGraph from '@/components/NetworkGraph.vue'
 import { 
   DataLine, 
   Refresh, 
@@ -113,6 +120,7 @@ import {
 import { dashboardApi } from '@/api'
 import { riskLabels } from '@/locales'
 
+const router = useRouter()
 const { t } = useI18n()
 const languageStore = useLanguageStore()
 const store = useDataStore()
@@ -586,7 +594,14 @@ onUnmounted(() => {
 /* 图表区域 */
 .charts-section {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
   margin-bottom: 32px;
 }
@@ -672,10 +687,18 @@ onUnmounted(() => {
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
+  
+  .dashboard-charts {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 1024px) {
   .charts-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-charts {
     grid-template-columns: 1fr;
   }
   

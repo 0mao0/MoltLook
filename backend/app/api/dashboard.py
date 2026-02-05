@@ -266,3 +266,148 @@ async def get_risk_distribution():
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/dashboard/network-graph")
+async def get_dashboard_network_graph():
+    """
+    获取Dashboard关系图数据
+    返回所有有互动关系的Agent网络
+    危险指数计算规则（0-100）：
+      - 阴谋指数（avg_conspiracy_7d * 10）：0-50分
+      - 互动影响力（pagerank_score * 50）：0-30分  
+      - 互动数量（log(1+互动次数)*5）：0-20分
+    """
+    try:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            db.row_factory = aiosqlite.Row
+            await db.execute("PRAGMA busy_timeout = 5000;")
+            
+            # 获取所有有互动关系的Agent
+            cursor = await db.execute("""
+                SELECT 
+                    a.id, a.name, a.risk_level, a.avg_conspiracy_7d, 
+                    a.pagerank_score, a.community_id,
+                    COALESCE(out_conn.out_count, 0) as outgoing_count,
+                    COALESCE(in_conn.in_count, 0) as incoming_count
+                FROM agents a
+                LEFT JOIN (
+                    SELECT source_id, COUNT(*) as out_count 
+                    FROM interactions GROUP BY source_id
+                ) out_conn ON a.id = out_conn.source_id
+                LEFT JOIN (
+                    SELECT target_id, COUNT(*) as in_count 
+                    FROM interactions GROUP BY target_id
+                ) in_conn ON a.id = in_conn.target_id
+                WHERE out_conn.out_count > 0 OR in_conn.in_count > 0
+                ORDER BY a.avg_conspiracy_7d DESC
+                LIMIT 100
+            """)
+            agents_with_interactions = await cursor.fetchall()
+            
+            if not agents_with_interactions:
+                return {"nodes": [], "edges": [], "stats": {"total_agents": 0, "total_interactions": 0}}
+            
+            agent_ids = [r["id"] for r in agents_with_interactions]
+            placeholders = ",".join("?" * len(agent_ids))
+            
+            # 获取所有互动关系
+            cursor = await db.execute(f"""
+                SELECT source_id, target_id, COUNT(*) as weight
+                FROM interactions
+                WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})
+                GROUP BY source_id, target_id
+                ORDER BY weight DESC
+                LIMIT 150
+            """, agent_ids + agent_ids)
+            interactions = await cursor.fetchall()
+            
+            # 构建节点
+            agents_dict = {r["id"]: r for r in agents_with_interactions}
+            
+            nodes = []
+            for r in agents_with_interactions:
+                agent_id = r["id"]
+                outgoing = next((i["weight"] for i in interactions if i["source_id"] == agent_id), 0)
+                incoming = next((i["weight"] for i in interactions if i["target_id"] == agent_id), 0)
+                total_interactions = outgoing + incoming
+                
+                # 计算危险指数（0-100）
+                conspiracy_score = float(r["avg_conspiracy_7d"] or 0) * 10
+                pagerank_score = float(r["pagerank_score"] or 0) * 50
+                interaction_score = min(20, (0 if total_interactions == 0 else total_interactions ** 0.5 * 3))
+                danger_index = round(conspiracy_score + pagerank_score + interaction_score, 1)
+                
+                # 根据危险指数设置颜色（0-100）
+                # 低风险(green) → 中风险(yellow) → 高风险(orange) → 极高风险(red)
+                if danger_index >= 70:
+                    color = "#dc2626"  # 红色 - 极高风险
+                elif danger_index >= 50:
+                    color = "#f97316"  # 橙色 - 高风险
+                elif danger_index >= 25:
+                    color = "#eab308"  # 黄色 - 中风险
+                else:
+                    color = "#22c55e"  # 绿色 - 低风险
+                
+                # 根据危险指数设置节点大小（15-60）
+                size = max(15, min(60, int(danger_index * 0.5 + 15)))
+                
+                # 合成名称
+                name = r["name"] or agent_id
+                if not r["name"]:
+                    parts = agent_id.split('-')
+                    suffix = parts[-2:] if len(parts) >= 2 else parts
+                    suffix_str = '-'.join(suffix)
+                    clean = ''.join(c for c in suffix_str if c.isalnum())
+                    name = f"Agent-{clean[:6]}"
+                
+                nodes.append({
+                    "id": agent_id,
+                    "name": name,
+                    "risk_level": r["risk_level"],
+                    "conspiracy_score": round(r["avg_conspiracy_7d"] or 0, 2),
+                    "pagerank_score": round(r["pagerank_score"] or 0, 4),
+                    "danger_index": danger_index,
+                    "interactions": total_interactions,
+                    "community_id": r["community_id"],
+                    "symbolSize": size,
+                    "itemStyle": {"color": color}
+                })
+            
+            # 构建边
+            edges = []
+            for i in interactions:
+                source = next((n for n in nodes if n["id"] == i["source_id"]), None)
+                target = next((n for n in nodes if n["id"] == i["target_id"]), None)
+                avg_danger = 0
+                if source and target:
+                    avg_danger = (source["danger_index"] + target["danger_index"]) / 2
+                
+                # 边颜色根据平均危险指数
+                if avg_danger >= 70:
+                    edge_color = "rgba(220, 38, 38, 0.6)"
+                elif avg_danger >= 50:
+                    edge_color = "rgba(249, 115, 22, 0.5)"
+                elif avg_danger >= 25:
+                    edge_color = "rgba(234, 179, 8, 0.4)"
+                else:
+                    edge_color = "rgba(34, 197, 94, 0.3)"
+                
+                edges.append({
+                    "source": i["source_id"],
+                    "target": i["target_id"],
+                    "value": i["weight"],
+                    "lineStyle": {"color": edge_color, "width": min(4, max(1, int(i["weight"] / 2)))}
+                })
+            
+            return {
+                "nodes": nodes,
+                "edges": edges,
+                "stats": {
+                    "total_agents": len(nodes),
+                    "total_interactions": len(interactions)
+                }
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

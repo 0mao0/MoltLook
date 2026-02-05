@@ -7,7 +7,7 @@
     destroy-on-close
     class="agent-detail-dialog"
   >
-    <div v-if="loading" class="detail-loading">
+    <div v-if="loading && !agent" class="detail-loading">
       <el-skeleton :rows="6" animated />
     </div>
     <div v-else-if="agent" class="agent-detail">
@@ -23,6 +23,26 @@
           <el-tag :type="riskType" effect="dark" size="large">
             {{ riskLabel() }}
           </el-tag>
+        </div>
+        <el-button 
+          type="primary" 
+          size="small"
+          :loading="analyzing"
+          @click="handleAnalyze"
+          class="ai-analyze-btn"
+        >
+          <el-icon><MagicStick /></el-icon>
+          {{ $t('agents.aiAnalyze') }}
+        </el-button>
+      </div>
+      
+      <div v-if="analysisResult" class="detail-card analysis-card">
+        <div class="section-title">
+          <el-icon><MagicStick /></el-icon>
+          {{ $t('agents.aiAnalysisResult') }}
+        </div>
+        <div class="section-content analysis-content">
+          {{ analysisResult }}
         </div>
       </div>
       
@@ -153,8 +173,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { User, TrendCharts, Document, ChatLineRound, Connection, Box } from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
+import { User, TrendCharts, Document, ChatLineRound, Connection, Box, MagicStick } from '@element-plus/icons-vue'
 import { useLanguageStore } from '@/stores/language'
 import { riskLabels } from '@/locales'
 import { agentsApi } from '@/api'
@@ -314,6 +334,32 @@ const connectionName = (id: string): string => {
   if (!id) return ''
   return composeAgentName(id)
 }
+
+/**
+ * AI 分析状态
+ */
+const analyzing = ref(false)
+const analysisResult = ref('')
+
+/**
+ * 执行 AI 分析
+ */
+const handleAnalyze = async () => {
+  if (!props.agent?.id) return
+  
+  analyzing.value = true
+  analysisResult.value = ''
+  
+  try {
+    const response = await agentsApi.analyzeAgent(props.agent.id)
+    analysisResult.value = response.data.analysis || '未能获取分析结果'
+  } catch (error: any) {
+    console.error('AI analysis failed:', error)
+    analysisResult.value = error.response?.data?.detail || '分析失败，请稍后重试'
+  } finally {
+    analyzing.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -367,6 +413,19 @@ const connectionName = (id: string): string => {
 
 .detail-risk-badge {
   flex-shrink: 0;
+}
+
+.ai-analyze-btn {
+  flex-shrink: 0;
+  margin-left: 8px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+  border: none !important;
+  font-weight: 600;
+}
+
+.ai-analyze-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .detail-card {
@@ -506,6 +565,17 @@ const connectionName = (id: string): string => {
   background: var(--bg-secondary);
   border-radius: 8px;
   border: 1px solid var(--border-color);
+}
+
+.analysis-card {
+  border-left: 4px solid var(--accent-primary);
+}
+
+.analysis-content {
+  color: var(--text-primary);
+  font-weight: 500;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1)) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
 }
 
 .recent-posts {

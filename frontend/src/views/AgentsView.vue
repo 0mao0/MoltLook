@@ -106,24 +106,26 @@
                   <span>{{ getDisplayName(agent) }}</span>
                 </div>
               </div>
-              <div class="info-row">
-                <div class="table-cell risk-cell">
-                  <span class="info-label">{{ $t('common.riskLevel') }}:</span>
-                  <el-tag :type="getRiskType(agent.risk_level)" effect="dark" size="small">
-                    {{ getRiskLabel(agent.risk_level) }}
-                  </el-tag>
+              <div class="table-cell risk-cell">
+                <span class="info-label">{{ $t('common.riskLevel') }}:</span>
+                <el-tag :type="getRiskType(agent.risk_level)" effect="dark" size="small">
+                  {{ getRiskLabel(agent.risk_level) }}
+                </el-tag>
+              </div>
+              <div class="table-cell score-cell">
+                <span class="info-label">{{ $t('common.score') }}:</span>
+                <div class="score-bar">
+                  <div 
+                    class="score-fill" 
+                    :class="getScoreClass(agent)"
+                    :style="{ width: (getDangerIndex(agent) || 0) + '%' }"
+                  ></div>
+                  <span class="score-text">{{ getDangerIndex(agent) || 0 }}/100</span>
                 </div>
-                <div class="table-cell score-cell">
-                  <span class="info-label">{{ $t('common.score') }}:</span>
-                  <div class="score-bar">
-                    <div class="score-fill" :style="{ width: (agent.avg_conspiracy_7d || 0) * 10 + '%' }"></div>
-                    <span class="score-text">{{ (agent.avg_conspiracy_7d || 0).toFixed(1) }}/10</span>
-                  </div>
-                </div>
-                <div class="table-cell count-cell">
-                  <span class="info-label">{{ $t('common.posts') }}:</span>
-                  <span>{{ agent.post_count || 0 }}</span>
-                </div>
+              </div>
+              <div class="table-cell count-cell">
+                <span class="info-label">{{ $t('common.posts') }}:</span>
+                <span>{{ agent.post_count || 0 }}</span>
               </div>
               <div class="table-cell time-cell">
                 <span class="info-label">{{ $t('common.lastActive') }}:</span>
@@ -291,6 +293,37 @@ const getAgentRiskLevel = (agent: any) => {
   if (score >= 4) return 'high'
   if (score >= 2) return 'medium'
   return 'low'
+}
+
+/**
+ * 计算 Agent 的危险指数（0-100）
+ * 危险指数 = 阴谋指数(50分) + 影响力(30分) + 互动数量(20分)
+ * @param agent Agent 对象
+ */
+const getDangerIndex = (agent: any): number => {
+  if (!agent) return 0
+  
+  const avg_conspiracy = Number(agent.avg_conspiracy_7d ?? 0)
+  const pagerank = Number(agent.pagerank_score ?? 0)
+  const post_count = Number(agent.post_count ?? 0)
+  
+  const conspiracy_score = avg_conspiracy * 10
+  const pagerank_score = pagerank * 50
+  const interaction_score = Math.min(20, Math.sqrt(post_count) * 3)
+  
+  return Math.round(conspiracy_score + pagerank_score + interaction_score)
+}
+
+/**
+ * 获取危险指数等级对应的CSS类
+ * @param agent Agent 对象
+ */
+const getScoreClass = (agent: any): string => {
+  const danger = getDangerIndex(agent)
+  if (danger >= 70) return 'score-critical'
+  if (danger >= 50) return 'score-high'
+  if (danger >= 25) return 'score-medium'
+  return 'score-low'
 }
 
 /**
@@ -529,7 +562,7 @@ onUnmounted(() => {
 }
 
 /* 统计卡片网格 */
-.stats-grid {
+.stats-grid, .risk-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
@@ -545,6 +578,10 @@ onUnmounted(() => {
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .stat-card:hover {
@@ -612,7 +649,7 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -773,7 +810,6 @@ onUnmounted(() => {
   display: flex;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  justify-content: center;
 }
 
 .table-row {
@@ -1086,14 +1122,14 @@ onUnmounted(() => {
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1126,9 +1162,24 @@ onUnmounted(() => {
   left: 0;
   top: 0;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #06b6d4);
   border-radius: 10px;
   transition: width 0.3s ease;
+}
+
+.score-fill.score-low {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.score-fill.score-medium {
+  background: linear-gradient(90deg, #eab308, #facc15);
+}
+
+.score-fill.score-high {
+  background: linear-gradient(90deg, #f97316, #fb923c);
+}
+
+.score-fill.score-critical {
+  background: linear-gradient(90deg, #dc2626, #ef4444);
 }
 
 .score-text {
@@ -1137,8 +1188,9 @@ onUnmounted(() => {
   display: block;
   text-align: center;
   line-height: 20px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .time-value {
@@ -1185,6 +1237,7 @@ onUnmounted(() => {
   }
   
   .table-row {
+    display: flex;
     flex-direction: column;
     padding: 16px;
     gap: 12px;
@@ -1210,12 +1263,11 @@ onUnmounted(() => {
     width: 100% !important;
     padding: 0;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .name-cell {
-    display: flex;
-    align-items: center;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(75, 85, 99, 0.3);
     margin-bottom: 4px;
@@ -1227,33 +1279,12 @@ onUnmounted(() => {
     color: var(--text-primary);
   }
   
-  .info-row {
-    gap: 8px;
-  }
-  
   .info-label {
-    display: block;
-  }
-  
-  .risk-cell {
-    order: 1;
-  }
-  
-  .score-cell {
-    order: 2;
+    display: none;
   }
   
   .score-bar {
     width: 80px;
-  }
-  
-  .count-cell {
-    order: 3;
-  }
-  
-  .time-cell {
-    order: 4;
-    width: 100%;
   }
   
   .time-value {
@@ -1262,9 +1293,7 @@ onUnmounted(() => {
   }
   
   .action-cell {
-    order: 5;
-    width: 100%;
-    margin-top: 8px;
+    margin-top: 4px;
     padding-top: 8px;
     border-top: 1px solid rgba(75, 85, 99, 0.3);
   }

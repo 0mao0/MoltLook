@@ -17,7 +17,8 @@ const api = axios.create({
 export const dashboardApi = {
   getDashboard: (days?: number) => api.get('/dashboard/stats', { params: days ? { days } : undefined }),
   getRealtimeStats: () => api.get('/stats/realtime'),
-  getRiskDistribution: () => api.get('/dashboard/risk-distribution')
+  getRiskDistribution: () => api.get('/dashboard/risk-distribution'),
+  getNetworkGraph: () => api.get('/dashboard/network-graph')
 }
 
 // Feed API
@@ -46,7 +47,8 @@ export const agentsApi = {
     api.get('/agents/risky', { params }),
   getAgentStats: () => api.get('/agents/stats'),
   searchAgents: (query: string, limit?: number) =>
-    api.get('/agents/search', { params: { query, limit } })
+    api.get('/agents/search', { params: { query, limit } }),
+  analyzeAgent: (id: string) => api.get(`/agent/${id}/analyze`, { timeout: 60000 })
 }
 
 // Translation & Analysis API

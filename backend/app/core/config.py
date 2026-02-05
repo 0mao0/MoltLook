@@ -47,7 +47,12 @@ class Settings:
     DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com")
     DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     
-    # AI 翻译 API 配置
+    # Qwen3 (DashScope) AI 配置
+    QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
+    QWEN_API_URL = os.getenv("QWEN_API_URL", "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation")
+    QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
+    
+    # AI 翻译 API 配置（用于AI分析功能）
     AI_API_URL = os.getenv("AI_API_URL", "https://ai.bim-ace.com/chat/v1/chat/completions")
     AI_MODEL = os.getenv("AI_MODEL", "Qwen3-VL-30B-A3B-Instruct-FP8")
     AI_API_KEY = os.getenv("AI_API_KEY", "")
