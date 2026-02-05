@@ -564,7 +564,7 @@ onUnmounted(() => {
 /* 统计卡片网格 */
 .stats-grid, .risk-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -703,7 +703,31 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+    min-height: 100px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stat-icon :deep(svg) {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
   }
 }
 

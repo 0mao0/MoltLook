@@ -39,10 +39,20 @@ async def get_dashboard():
             avg_risk = round(row[2] or 0, 2)
             danger_count = row[3] or 0
             
-            # 确定风险等级
-            if danger_count > 50:
+            # 计算风险等级：基于最近7天平均阴谋指数
+            # avg_risk 就是最近24小时内的平均阴谋指数
+            avg_risk = round(row[2] or 0, 2)
+            
+            # 确定风险等级：基于平均阴谋指数
+            # ≥8: critical (极高风险)
+            # 5-8: high (高风险)
+            # 3-5: medium (中风险)
+            # <3: low (低风险)
+            if avg_risk >= 8:
+                risk_level = "critical"
+            elif avg_risk >= 5:
                 risk_level = "high"
-            elif danger_count > 10:
+            elif avg_risk >= 3:
                 risk_level = "medium"
             else:
                 risk_level = "low"
@@ -124,27 +134,30 @@ async def get_dashboard_stats(days: int = 7):
             cursor = await db.execute("SELECT COUNT(*) FROM interactions")
             total_connections = (await cursor.fetchone())[0]
             
-            # 计算风险等级：基于高风险帖子占总数的比例
-            # 统计所有的高风险帖子数（不限制时间）
-            cursor = await db.execute(
-                "SELECT COUNT(*) FROM posts WHERE risk_level='high' OR risk_level='critical'"
-            )
-            high_risk_count = (await cursor.fetchone())[0]
+            # 计算风险等级：基于最近24小时平均阴谋指数
+            # 统计24小时内帖子的平均阴谋指数
+            cursor = await db.execute("""
+                SELECT AVG(conspiracy_score) FROM posts 
+                WHERE created_at > strftime('%s', 'now', '-1 day')
+            """)
+            avg_risk_24h = round((await cursor.fetchone())[0] or 0, 2)
             
-            # 统计 24 小时内的高风险帖子数（用于显示最近趋势）
+            # 统计24小时内的高风险帖子数
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM posts WHERE (risk_level='high' OR risk_level='critical') AND created_at > strftime('%s', 'now', '-1 day')"
             )
             high_risk_count_24h = (await cursor.fetchone())[0]
             
-            if total_posts > 0:
-                high_risk_ratio = high_risk_count / total_posts
-            else:
-                high_risk_ratio = 0
-            
-            if high_risk_ratio > 0.3:
+            # 确定风险等级：基于平均阴谋指数
+            # ≥8: critical (极高风险)
+            # 5-8: high (高风险)
+            # 3-5: medium (中风险)
+            # <3: low (低风险)
+            if avg_risk_24h >= 8:
+                risk_level = "critical"
+            elif avg_risk_24h >= 5:
                 risk_level = "high"
-            elif high_risk_ratio > 0.15:
+            elif avg_risk_24h >= 3:
                 risk_level = "medium"
             else:
                 risk_level = "low"

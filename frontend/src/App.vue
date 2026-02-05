@@ -56,6 +56,10 @@ watch(() => route.path, () => {
               <h1>{{ t('app.name') }}</h1>
               <span class="tagline">{{ t('app.tagline') }}</span>
             </div>
+            <button class="lang-switch-btn" @click="toggleLanguage">
+              <el-icon size="14"><Switch /></el-icon>
+              <span>{{ locale === 'zh' ? t('common.english') : t('common.chinese') }}</span>
+            </button>
           </div>
           <nav class="top-tabs">
             <router-link
@@ -68,13 +72,6 @@ watch(() => route.path, () => {
               <span>{{ t(item.labelKey) }}</span>
             </router-link>
           </nav>
-        </div>
-        
-        <div class="header-actions">
-          <button class="lang-switch-btn" @click="toggleLanguage">
-            <el-icon size="14"><Switch /></el-icon>
-            <span>{{ locale === 'zh' ? t('common.english') : t('common.chinese') }}</span>
-          </button>
         </div>
       </header>
       

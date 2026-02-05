@@ -18,25 +18,6 @@
         </div>
       </div>
 
-      <!-- 24小时帖子数 -->
-      <div class="stat-card" style="cursor: pointer" @click="router.push('/feed')">
-        <div class="card-glow"></div>
-        <div class="card-content">
-          <div class="stat-icon blue">
-            <el-icon size="32"><Document /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">{{ $t('dashboard.posts24h') }}</span>
-            <span class="stat-value">{{ formatNumber(stats?.posts_24h) }}</span>
-          </div>
-        </div>
-        <div class="stat-trend" :class="getGrowthClass(stats?.growth_rate)">
-          <el-icon v-if="stats?.growth_rate > 0"><ArrowUp /></el-icon>
-          <el-icon v-else-if="stats?.growth_rate < 0"><ArrowDown /></el-icon>
-          <span>{{ formatGrowthRate(stats?.growth_rate) }}</span>
-        </div>
-      </div>
-
       <!-- 活跃 Agent -->
       <div class="stat-card" style="cursor: pointer" @click="router.push('/agents')">
         <div class="card-glow"></div>
@@ -54,7 +35,7 @@
         </div>
       </div>
 
-      <!-- 高风险帖子 -->
+      <!-- 高危帖子（合并24小时帖子数和高风险帖子） -->
       <div class="stat-card danger-card" style="cursor: pointer" @click="router.push({ path: '/feed', query: { risk: 'high' } })">
         <div class="card-glow"></div>
         <div class="card-content">
@@ -66,9 +47,28 @@
             <span class="stat-value">{{ formatNumber(stats?.danger_count) }}</span>
           </div>
         </div>
-        <div class="stat-alert" v-if="stats?.danger_count > 0">
-          <el-icon><Warning /></el-icon>
-          <span>{{ $t('dashboard.needAttention') }}</span>
+        <div class="stat-trend secondary">
+          <el-icon size="14"><Document /></el-icon>
+          <span>{{ $t('dashboard.monitoredPosts', { count: formatNumber(stats?.posts_24h) }) }}</span>
+        </div>
+      </div>
+
+      <!-- 总计帖子数 -->
+      <div class="stat-card" style="cursor: pointer" @click="router.push('/feed')">
+        <div class="card-glow"></div>
+        <div class="card-content">
+          <div class="stat-icon blue">
+            <el-icon size="32"><Document /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">{{ $t('dashboard.totalPosts') }}</span>
+            <span class="stat-value">{{ formatNumber(stats?.posts_24h) }}</span>
+          </div>
+        </div>
+        <div class="stat-trend" :class="getGrowthClass(stats?.growth_rate)">
+          <el-icon v-if="stats?.growth_rate > 0"><ArrowUp /></el-icon>
+          <el-icon v-else-if="stats?.growth_rate < 0"><ArrowDown /></el-icon>
+          <span>{{ formatGrowthRate(stats?.growth_rate) }}</span>
         </div>
       </div>
     </div>
@@ -424,7 +424,7 @@ onUnmounted(() => {
 /* 统计卡片网格 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -572,6 +572,12 @@ onUnmounted(() => {
   color: var(--accent-danger);
 }
 
+.stat-trend.secondary {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .stat-alert {
   display: flex;
   align-items: center;
@@ -685,7 +691,7 @@ onUnmounted(() => {
 /* 响应式 */
 @media (max-width: 1200px) {
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .dashboard-charts {
@@ -703,7 +709,7 @@ onUnmounted(() => {
   }
   
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .page-title {
@@ -713,7 +719,8 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   
   .page-header {
@@ -726,11 +733,26 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    padding: 16px;
+    padding: 12px;
+    min-height: 100px;
   }
   
   .stat-value {
-    font-size: 24px;
+    font-size: 20px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stat-icon :deep(svg) {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
   }
   
   .chart-card {
