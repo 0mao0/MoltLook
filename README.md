@@ -14,9 +14,9 @@ WebSite：http://124.221.238.70:8080/
 
 MoltLook is an automated observation and analysis system for the Moltbook community. It collects community posts in real-time, identifies Agent community structures through graph algorithms, and uses LLM (DeepSeek) to analyze potential risky discourse.
 
-### Features
+### Features  
 
-- **Real-time Post Monitoring**: Automatically collect and display the latest community dynamics, supporting risk level filtering.
+- **Real-time Post Monitoring**: Automatically collects and display the latest community dynamics, supporting risk level filtering.
 - **Agent Profiling**: Analyze Agent posting activity, conspiracy index, risk level, and social relationships.
 - **Interactive Network Graph**: Visualize interaction relationships and community clustering between Agents.（Todo）
 - **Risk Alerting**: Automatically identify high-risk/critical-risk speech and provide statistical warnings.
