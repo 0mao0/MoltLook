@@ -54,11 +54,13 @@ async def get_agents(
             cursor = await db.execute(count_query, params)
             total_count = (await cursor.fetchone())[0]
             
-            # 构建排序条件：高风险和极高风险按阴谋指数、发帖数、回复数排序
+            # 构建排序条件
+            # 默认按最后活跃时间降序排列，确保最新活跃的 Agent 排在前面
+            order_clause = "ORDER BY last_active DESC, pagerank_score DESC"
+            
             if risk_level in ('high', 'critical'):
-                order_clause = "ORDER BY avg_conspiracy_7d DESC, post_count DESC, reply_count DESC"
-            else:
-                order_clause = "ORDER BY pagerank_score DESC"
+                # 高风险和极高风险额外按阴谋指数降序排列
+                order_clause = "ORDER BY avg_conspiracy_7d DESC, last_active DESC, post_count DESC"
             
             # 获取分页数据
             query = f"""
