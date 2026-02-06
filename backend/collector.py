@@ -211,29 +211,34 @@ class Collector:
 
     async def cleanup_old_posts(self, db: aiosqlite.Connection):
         """
-        清理旧帖子，仅保留最新 1000 条
+        清理旧帖子，规则：
+        1. 永远保留 risk_level 为 'high' 或 'critical' 的帖子
+        2. 对于 'low' 或 'medium' 的帖子，仅保留最新的 20000 条
         """
         try:
-            # 获取当前总帖子数
-            cursor = await db.execute("SELECT COUNT(*) FROM posts")
-            current_count = (await cursor.fetchone())[0]
+            # 获取需要清理的风险等级总数
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM posts WHERE risk_level IN ('low', 'medium') OR risk_level IS NULL"
+            )
+            low_risk_count = (await cursor.fetchone())[0]
             
-            if current_count > 1000:
-                # 删除超过1000条的旧帖子
+            if low_risk_count > 20000:
+                # 删除超过 20000 条以外的低/中风险旧帖子
                 await db.execute(
                     """
                     DELETE FROM posts
                     WHERE id IN (
                         SELECT id FROM posts
+                        WHERE risk_level IN ('low', 'medium') OR risk_level IS NULL
                         ORDER BY created_at DESC
-                        LIMIT -1 OFFSET 1000
+                        LIMIT -1 OFFSET 20000
                     )
                     """
                 )
-                deleted_count = current_count - 1000
-                logger.info(f"Cleaned up {deleted_count} old posts, keeping latest 1000")
+                deleted_count = low_risk_count - 20000
+                logger.info(f"Cleaned up {deleted_count} low/medium risk posts, keeping latest 20000")
                 
-                # 更新历史总帖子数
+                # 更新历史总帖子数（统计用）
                 await db.execute(
                     "UPDATE collection_state SET total_posts_count = total_posts_count + ? WHERE id = 1",
                     (deleted_count,)

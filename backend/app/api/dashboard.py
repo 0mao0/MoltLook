@@ -461,8 +461,8 @@ async def get_dashboard_network_graph():
                 "nodes": nodes,
                 "edges": edges,
                 "stats": {
-                    "total_agents": len(nodes),
-                    "total_interactions": len(interactions)
+                    "total_agents": global_total_agents,
+                    "total_interactions": global_total_interactions
                 }
             }
             

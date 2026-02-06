@@ -229,6 +229,12 @@ class Database:
             INSERT OR IGNORE INTO collection_state (id) VALUES (1)
         """)
         
+        # 如果 total_posts_count 列不存在，添加它
+        try:
+            await conn.execute("ALTER TABLE collection_state ADD COLUMN total_posts_count INTEGER DEFAULT 0")
+        except aiosqlite.OperationalError:
+            pass  # 列已存在
+        
         await conn.commit()
     
     async def __aenter__(self):
