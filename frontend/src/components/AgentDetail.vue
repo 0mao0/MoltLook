@@ -1,7 +1,185 @@
 <template>
+  <div v-if="inline" class="agent-detail-panel">
+    <div v-if="loading && !agent" class="detail-loading">
+      <el-skeleton :rows="6" animated />
+    </div>
+    <div v-else-if="agent" class="agent-detail">
+      <div class="detail-header">
+        <div class="detail-avatar">
+          <el-icon size="32"><User /></el-icon>
+        </div>
+        <div class="detail-title">
+          <div class="detail-name">{{ displayName }}</div>
+          <div class="detail-id">{{ agent.id }}</div>
+        </div>
+        <div class="detail-risk-badge">
+          <el-tag :type="riskType" effect="dark" size="large">
+            {{ riskLabel() }}
+          </el-tag>
+        </div>
+        <el-button 
+          type="primary" 
+          size="small"
+          :loading="analyzing"
+          @click="handleAnalyze"
+          class="ai-analyze-btn"
+        >
+          <el-icon><MagicStick /></el-icon>
+          {{ $t('agents.aiAnalyze') }}
+        </el-button>
+      </div>
+      
+      <div v-if="analysisResult" class="detail-card analysis-card">
+        <div class="section-title">
+          <el-icon><MagicStick /></el-icon>
+          {{ $t('agents.aiAnalysisResult') }}
+        </div>
+        <div class="section-content analysis-content">
+          {{ analysisResult }}
+        </div>
+      </div>
+      
+      <div class="detail-card stats-card">
+        <div class="card-glow"></div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-icon danger">
+              <el-icon><Warning /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ getDangerIndex(props.agent) }}/100</div>
+              <div class="stat-label">危险指数</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon conspiracy">
+              <el-icon><TrendCharts /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ (agent.avg_conspiracy_7d || 0).toFixed(1) }}</div>
+              <div class="stat-label">{{ $t('dashboard.avgConspiracy') }}</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon posts">
+              <el-icon><Document /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ agent.post_count || 0 }}</div>
+              <div class="stat-label">{{ $t('common.posts') }}</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon replies">
+              <el-icon><ChatLineRound /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ agent.reply_count || 0 }}</div>
+              <div class="stat-label">{{ $t('common.replies') }}</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon community">
+              <el-icon><Connection /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ agent.community_id ?? '-' }}</div>
+              <div class="stat-label">{{ $t('common.community') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card info-card">
+        <div class="info-row">
+          <div class="info-label">{{ $t('common.firstSeen') }}</div>
+          <div class="info-value">{{ formattedFirstSeen }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">{{ $t('common.lastActive') }}</div>
+          <div class="info-value">{{ formattedLastActive }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">{{ $t('common.beReplied') }}</div>
+          <div class="info-value">{{ agent.be_replied_count || 0 }}</div>
+        </div>
+      </div>
+
+      <div v-if="agent.description" class="detail-card description-card">
+        <div class="section-title">
+          <el-icon><Document /></el-icon>
+          {{ $t('common.description') }}
+        </div>
+        <div class="section-content">{{ agent.description }}</div>
+      </div>
+
+      <div class="detail-card posts-card">
+        <div class="section-title">
+          <el-icon><ChatLineRound /></el-icon>
+          {{ $t('common.recentPosts') }}
+          <el-tag v-if="highRiskPosts.length" type="danger" size="small" effect="dark" class="high-risk-badge">
+            {{ $t('agents.highRiskCount', { count: highRiskPosts.length }) }}
+          </el-tag>
+        </div>
+        <div v-if="agent.recent_posts?.length" class="recent-posts">
+          <div 
+            v-for="post in agent.recent_posts" 
+            :key="post.id" 
+            class="recent-post-item"
+            :class="postRiskLevel(post)"
+          >
+            <div class="post-item-content">{{ post.content }}</div>
+            <div class="post-item-footer">
+              <span class="post-item-time">{{ formattedPostTime(post.created_at) }}</span>
+              <div class="post-item-badges">
+                <span class="post-item-badge risk" :class="postRiskLevel(post)">
+                  {{ riskLabel(postRiskLevel(post)) }}
+                </span>
+                <span class="post-item-badge score">
+                  {{ $t('common.score') }} {{ (post.conspiracy_score || 0).toFixed(1) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-detail">
+          <el-icon><Box /></el-icon>
+          <span>{{ $t('agents.noPosts') }}</span>
+        </div>
+      </div>
+
+      <div class="detail-card connections-card">
+        <div class="section-title">
+          <el-icon><Connection /></el-icon>
+          {{ $t('common.connections') }}
+        </div>
+        <div v-if="agent.connections?.length" class="connections">
+          <div v-for="item in agent.connections" :key="item.agent_id" class="connection-item">
+            <div class="connection-avatar">
+              <el-icon><User /></el-icon>
+            </div>
+            <div class="connection-info">
+              <div class="connection-name">{{ connectionName(item.agent_id) }}</div>
+              <div class="connection-id">{{ item.agent_id }}</div>
+            </div>
+            <div class="connection-count">{{ item.count }}</div>
+          </div>
+        </div>
+        <div v-else class="empty-detail">
+          <el-icon><Box /></el-icon>
+          <span>{{ $t('agents.noConnections') }}</span>
+        </div>
+      </div>
+    </div>
+    <div v-else class="detail-empty">
+      <el-icon><Box /></el-icon>
+      <span>{{ $t('common.selectAgent') || '请选择一个 Agent' }}</span>
+    </div>
+  </div>
   <el-dialog
+    v-else
     :model-value="visible"
-    @update:model-value="$emit('update:visible', $event)"
+    @update:model-value="emit('update:visible', $event)"
     :title="$t('agents.detailTitle')"
     :width="dialogWidth"
     destroy-on-close
@@ -194,7 +372,9 @@ interface Agent {
   avg_conspiracy_7d?: number
   post_count?: number
   reply_count?: number
+  pagerank_score?: number
   community_id?: number
+  risk_level?: string
   first_seen?: number
   last_active?: number
   be_replied_count?: number
@@ -204,14 +384,17 @@ interface Agent {
 }
 
 interface Props {
-  visible: boolean
+  visible?: boolean
   agent?: Agent | null
   loading?: boolean
+  inline?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  visible: false,
   agent: null,
-  loading: false
+  loading: false,
+  inline: false
 })
 
 const emit = defineEmits<{
@@ -219,6 +402,15 @@ const emit = defineEmits<{
 }>()
 
 const languageStore = useLanguageStore()
+
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (val) => emit('update:visible', val)
+})
+
+const onDialogVisibleChange = (val: boolean) => {
+  emit('update:visible', val)
+}
 
 /**
  * 对话框宽度 - 根据屏幕宽度动态调整
@@ -291,14 +483,17 @@ const riskLabel = (level?: string): string => {
 /**
  * 获取 Agent 风险等级
  */
-const getRiskLevel = (agent: Agent): string => {
+const getRiskLevel = (agent?: Agent | null): string => {
   if (!agent) return 'low'
+  const score = Number(agent.avg_conspiracy_7d)
+  if (Number.isFinite(score)) {
+    if (score >= 10) return 'critical'
+    if (score >= 8) return 'high'
+    if (score >= 4) return 'medium'
+    return 'low'
+  }
   const raw = (agent.risk_level || '').trim()
   if (raw) return raw
-  const score = Number(agent.avg_conspiracy_7d ?? 0)
-  if (score >= 7) return 'critical'
-  if (score >= 4) return 'high'
-  if (score >= 2) return 'medium'
   return 'low'
 }
 
@@ -307,7 +502,7 @@ const getRiskLevel = (agent: Agent): string => {
  * 危险指数 = 阴谋指数(50分) + 影响力(30分) + 互动数量(20分)
  * @param agent Agent 对象
  */
-const getDangerIndex = (agent: Agent): number => {
+const getDangerIndex = (agent?: Agent | null): number => {
   if (!agent) return 0
   
   const avg_conspiracy = Number(agent.avg_conspiracy_7d ?? 0)
@@ -327,12 +522,15 @@ const getDangerIndex = (agent: Agent): number => {
  */
 const postRiskLevel = (post: any): string => {
   if (!post) return 'low'
+  const score = Number(post.conspiracy_score)
+  if (Number.isFinite(score)) {
+    if (score >= 10) return 'critical'
+    if (score >= 8) return 'high'
+    if (score >= 4) return 'medium'
+    return 'low'
+  }
   const raw = (post.risk_level || '').trim()
   if (raw) return raw
-  const score = Number(post.conspiracy_score ?? 0)
-  if (score >= 7) return 'critical'
-  if (score >= 4) return 'high'
-  if (score >= 2) return 'medium'
   return 'low'
 }
 
@@ -405,6 +603,31 @@ const handleAnalyze = async () => {
 <style scoped>
 .detail-loading {
   padding: 20px;
+}
+
+.agent-detail-panel {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 24px 16px;
+}
+
+.detail-empty :deep(svg) {
+  width: 36px;
+  height: 36px;
+  opacity: 0.4;
 }
 
 .agent-detail {

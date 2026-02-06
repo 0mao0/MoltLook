@@ -79,11 +79,12 @@ class FeatureExtractor:
             submolt_name = submolt_data
         
         # 根据阴谋指数设置风险等级
-        if conspiracy_score >= 7:
+        # 低风险: 0-3, 中风险: 4-7, 高风险: 8-9, 极高风险: 10
+        if conspiracy_score >= 10:
             risk_level = 'critical'
-        elif conspiracy_score >= 4:
+        elif conspiracy_score >= 8:
             risk_level = 'high'
-        elif conspiracy_score >= 2:
+        elif conspiracy_score >= 4:
             risk_level = 'medium'
         else:
             risk_level = 'low'

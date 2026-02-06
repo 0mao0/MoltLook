@@ -287,20 +287,14 @@ class Collector:
             if critical_count > 0:
                 risk_level = 'critical'
             elif high_count > 0:
-                # 如果有高风险帖子，根据比例判断
-                if high_count >= post_count * 0.5:
-                    risk_level = 'critical'
-                elif high_count >= post_count * 0.3:
-                    risk_level = 'high'
-                else:
-                    risk_level = 'medium'
+                risk_level = 'high'
             else:
                 # 没有高风险帖子，根据平均阴谋指数判断
-                if avg_score >= 7:
+                if avg_score >= 10:
                     risk_level = 'critical'
-                elif avg_score >= 4:
+                elif avg_score >= 8:
                     risk_level = 'high'
-                elif avg_score >= 2:
+                elif avg_score >= 4:
                     risk_level = 'medium'
                 else:
                     risk_level = 'low'

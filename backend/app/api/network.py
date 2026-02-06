@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api", tags=["network"])
 
 @router.get("/network", response_model=NetworkData)
 async def get_network(
-    limit: int = Query(default=200, ge=50, le=500),
+    limit: int = Query(default=1000, ge=50, le=2000),
     community_id: int = Query(default=None)
 ):
     """

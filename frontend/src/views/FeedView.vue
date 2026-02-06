@@ -14,7 +14,7 @@
                 <el-icon size="32"><CircleCheck /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ t('risk.low') }}</span>
+                <span class="stat-label">{{ t('feed.risk.low') }}</span>
                 <span class="stat-value">{{ formatRiskCount('low') }}</span>
               </div>
             </div>
@@ -33,7 +33,7 @@
                 <el-icon size="32"><Warning /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ t('risk.medium') }}</span>
+                <span class="stat-label">{{ t('feed.risk.medium') }}</span>
                 <span class="stat-value">{{ formatRiskCount('medium') }}</span>
               </div>
             </div>
@@ -52,7 +52,7 @@
                 <el-icon size="32"><CircleClose /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ t('risk.high') }}</span>
+                <span class="stat-label">{{ t('feed.risk.high') }}</span>
                 <span class="stat-value">{{ formatRiskCount('high') }}</span>
               </div>
             </div>
@@ -71,7 +71,7 @@
                 <el-icon size="32"><WarningFilled /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ t('risk.critical') }}</span>
+                <span class="stat-label">{{ t('feed.risk.critical') }}</span>
                 <span class="stat-value">{{ formatRiskCount('critical') }}</span>
               </div>
             </div>
@@ -99,7 +99,7 @@
             v-for="post in posts" 
             :key="post.id" 
             class="post-card"
-            :class="post.risk_level"
+            :class="getPostRiskLevel(post)"
           >
             <!-- Agent 卡片 -->
             <div class="agent-badge">
@@ -121,8 +121,9 @@
               >
                 {{ post.title || t('common.viewOriginal') }}
               </a>
-              <div class="risk-badge" :style="{ '--badge-color': getRiskColor(post.risk_level) }">
-                {{ getRiskLabel(post.risk_level) }}
+              <div class="risk-badge" :style="{ '--badge-color': getRiskColor(getPostRiskLevel(post)) }">
+                {{ getRiskLabel(getPostRiskLevel(post)) }}
+                <span class="risk-score">{{ formatPostRiskScore(post.conspiracy_score) }}</span>
               </div>
             </div>
             
@@ -201,11 +202,11 @@
         
         <div class="detail-stats">
           <el-descriptions :column="2" border>
-            <el-descriptions-item :label="t('common.riskLevel')">
-              <el-tag :type="getRiskType(selectedPost.risk_level)" effect="dark">
-                {{ getRiskLabel(selectedPost.risk_level) }}
-              </el-tag>
-            </el-descriptions-item>
+          <el-descriptions-item :label="t('common.riskLevel')">
+            <el-tag :type="getRiskType(getPostRiskLevel(selectedPost))" effect="dark">
+              {{ getRiskLabel(getPostRiskLevel(selectedPost)) }}
+            </el-tag>
+          </el-descriptions-item>
             <el-descriptions-item :label="t('common.score')">
               {{ (selectedPost.conspiracy_score || 0).toFixed(1) }}/10
             </el-descriptions-item>
@@ -323,6 +324,32 @@ const getRiskLabel = (level: string) => {
   const labels = riskLabels[level]
   if (!labels) return level
   return languageStore.locale === 'zh' ? labels.zh : labels.en
+}
+
+/**
+ * 根据分值获取帖子风险等级
+ */
+const getPostRiskLevel = (post: any) => {
+  if (!post) return 'low'
+  const score = Number(post.conspiracy_score)
+  if (Number.isFinite(score)) {
+    if (score >= 10) return 'critical'
+    if (score >= 8) return 'high'
+    if (score >= 4) return 'medium'
+    return 'low'
+  }
+  const raw = (post.risk_level || '').trim()
+  if (raw) return raw
+  return 'low'
+}
+
+/**
+ * 格式化帖子风险指数
+ */
+const formatPostRiskScore = (score: number) => {
+  const value = Number(score)
+  if (!Number.isFinite(value)) return '0.0'
+  return value.toFixed(1)
 }
 
 /**
@@ -651,7 +678,7 @@ onUnmounted(() => {
 .risk-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 20px;
   width: 100%;
 }
 
@@ -660,7 +687,7 @@ onUnmounted(() => {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -690,13 +717,13 @@ onUnmounted(() => {
 .card-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -731,14 +758,14 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -923,6 +950,7 @@ onUnmounted(() => {
 .risk-badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 11px;
@@ -933,6 +961,11 @@ onUnmounted(() => {
   flex-shrink: 0;
   opacity: 0.9;
   margin-left: auto;
+}
+
+.risk-score {
+  color: #f9fafb;
+  font-weight: 700;
 }
 
 .submolt-badge {

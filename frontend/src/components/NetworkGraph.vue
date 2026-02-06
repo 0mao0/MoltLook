@@ -1,5 +1,5 @@
 <template>
-  <div class="network-graph-card" v-loading="loading">
+  <div ref="cardRef" class="network-graph-card">
     <div class="graph-header">
       <div class="graph-title">
         <el-icon><Connection /></el-icon>
@@ -16,6 +16,9 @@
             {{ graphData.stats.total_interactions }}
           </span>
         </div>
+        <span v-if="selectedAgent" class="selected-hint">
+          已选中：{{ selectedAgent.name || selectedAgent.id }}
+        </span>
         <el-button
           type="primary"
           size="small"
@@ -27,22 +30,37 @@
         </el-button>
       </div>
     </div>
-    <div ref="graphRef" class="graph-container"></div>
-    <div v-if="!loading && (!graphData?.nodes || graphData.nodes.length === 0)" class="empty-state">
-      <el-icon size="48"><Warning /></el-icon>
-      <p>{{ $t('common.empty') }}</p>
+    <div class="graph-body">
+      <div class="graph-panel">
+        <div ref="graphRef" class="graph-container"></div>
+
+        <div v-if="loading" class="graph-loading">
+          <el-icon class="loading-icon"><Loading /></el-icon>
+          <span>{{ $t('common.loading') }}</span>
+        </div>
+
+        <div v-if="!loading && (!graphData?.nodes || graphData.nodes.length === 0)" class="empty-state">
+          <el-icon size="48"><Warning /></el-icon>
+          <p>{{ $t('common.empty') }}</p>
+        </div>
+      </div>
     </div>
+
+    <AgentDetail v-model:visible="detailDialogVisible" :agent="selectedAgent" :loading="detailLoading" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { Connection, User, Link, Warning, RefreshRight } from '@element-plus/icons-vue'
-import { dashboardApi } from '@/api'
+import { Connection, User, Link, Warning, RefreshRight, Loading } from '@element-plus/icons-vue'
+import { dashboardApi, agentsApi } from '@/api'
+import AgentDetail from '@/components/AgentDetail.vue'
 
+const cardRef = ref<HTMLElement>()
 const graphRef = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
+let lastNodeClickAt = 0
 
 const loading = ref(true)
 const graphData = ref<{
@@ -50,6 +68,19 @@ const graphData = ref<{
   edges: any[]
   stats: { total_agents: number; total_interactions: number }
 } | null>(null)
+const selectedAgent = ref<any>(null)
+const detailLoading = ref(false)
+const detailDialogVisible = ref(false)
+
+const selectNodeById = (nodeId: string, fallbackNode?: any) => {
+  console.log('[NetworkGraph] selectNodeById called:', nodeId, fallbackNode)
+  if (!nodeId) return
+  selectedAgent.value = fallbackNode || selectedAgent.value
+  detailDialogVisible.value = true
+  console.log('[NetworkGraph] detailDialogVisible:', detailDialogVisible.value)
+  lastNodeClickAt = Date.now()
+  loadAgentDetail(nodeId)
+}
 
 const initChart = () => {
   if (!graphRef.value || !graphData.value?.nodes?.length) return
@@ -69,6 +100,7 @@ const initChart = () => {
     },
     tooltip: {
       trigger: 'item',
+      triggerOn: 'mousemove',
       backgroundColor: 'rgba(17, 24, 39, 0.95)',
       borderColor: 'rgba(75, 85, 99, 0.4)',
       textStyle: { color: '#f9fafb' },
@@ -87,7 +119,7 @@ const initChart = () => {
               危险等级: <span style="color:${params.data.itemStyle?.color || '#22c55e'}">${dangerLevel}</span><br/>
               阴谋指数: <span style="color:#ef4444">${params.data.conspiracy_score}</span><br/>
               互动次数: <span style="color:#3b82f6">${params.data.interactions || 0}</span><br/>
-              PageRank: ${params.data.pagerank_score}
+              互动影响力: <span style="color:#a855f7">${(params.data.pagerank_score * 100).toFixed(2)}%</span>
             </div>
           `
         } else if (params.dataType === 'edge') {
@@ -108,7 +140,7 @@ const initChart = () => {
         ...node,
         symbolSize: node.symbolSize || 35,
         label: {
-          show: node.symbolSize > 30,
+          show: node.symbolSize > 25,
           fontSize: 10,
           color: '#f9fafb'
         }
@@ -127,20 +159,60 @@ const initChart = () => {
         width: 1.5
       },
       force: {
-        repulsion: 120,
-        edgeLength: 80,
-        gravity: 0.03
+        repulsion: 150,
+        edgeLength: 100,
+        gravity: 0.05,
+        layoutAnimation: true
       },
+      progressiveThreshold: 500,
+      progressive: 100,
       emphasis: {
         focus: 'adjacency',
         lineStyle: {
           width: 4
+        }
+      },
+      blur: {
+        itemStyle: {
+          opacity: 0.12
+        },
+        label: {
+          opacity: 0.1
+        },
+        lineStyle: {
+          opacity: 0.08
         }
       }
     }]
   }
   
   chart.setOption(option)
+
+  const handleEchartsEvent = (params: any) => {
+    console.log('[NetworkGraph] Chart click event:', params.dataType, params.data)
+    const isNode = params?.dataType === 'node'
+    const nodeId = params?.data?.id || params?.data?.agent_id || params?.data?.agentId
+    console.log('[NetworkGraph] isNode:', isNode, 'nodeId:', nodeId)
+    if (isNode && nodeId) {
+      selectNodeById(String(nodeId), params.data)
+    }
+  }
+
+  chart.off('click')
+  chart.off('mousedown')
+  chart.on('click', handleEchartsEvent)
+  chart.on('mousedown', handleEchartsEvent)
+
+  const handleZrEvent = (event: any) => {
+    if (!event?.target) {
+      if (Date.now() - lastNodeClickAt > 200) {
+        clearSelection()
+      }
+    }
+  }
+
+  chart.getZr().off('click')
+  chart.getZr().on('click', handleZrEvent)
 }
 
 const resetZoom = () => {
@@ -148,6 +220,24 @@ const resetZoom = () => {
     chart.dispatchAction({
       type: 'restore'
     })
+  }
+}
+
+const clearSelection = () => {
+  detailDialogVisible.value = false
+  selectedAgent.value = null
+}
+
+const loadAgentDetail = async (agentId: string) => {
+  detailLoading.value = true
+  try {
+    const res = await agentsApi.getAgent(agentId)
+    selectedAgent.value = res.data || null
+  } catch (error) {
+    console.error('Failed to fetch agent detail:', error)
+    // 保留节点的 fallback 数据，避免弹框空白
+  } finally {
+    detailLoading.value = false
   }
 }
 
@@ -169,19 +259,35 @@ const resizeHandler = () => {
   chart?.resize()
 }
 
+const handleDocumentClick = (event: MouseEvent) => {
+  if (detailDialogVisible.value) return
+  const target = event.target as Node | null
+  if (cardRef.value && target && !cardRef.value.contains(target)) {
+    clearSelection()
+  }
+}
+
 watch(() => graphData.value, () => {
   nextTick(() => {
     initChart()
   })
 }, { deep: true })
 
+watch(detailDialogVisible, (visible) => {
+  if (!visible) {
+    selectedAgent.value = null
+  }
+})
+
 onMounted(() => {
   fetchData()
   window.addEventListener('resize', resizeHandler)
+  window.addEventListener('click', handleDocumentClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeHandler)
+  window.removeEventListener('click', handleDocumentClick)
   chart?.dispose()
 })
 </script>
@@ -192,9 +298,9 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 20px;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 640px;
 }
 
 .graph-header {
@@ -241,6 +347,19 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 
+.selected-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stat-item :deep(svg) {
   width: 12px;
   height: 12px;
@@ -252,10 +371,79 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-.graph-container {
+.graph-body {
+  display: flex;
+  gap: 16px;
+  min-height: 560px;
   flex: 1;
-  min-height: 280px;
+}
+
+.graph-panel {
+  flex: 2;
+  min-width: 0;
+  position: relative;
+  height: 100%;
+}
+
+.detail-panel {
+  flex: 1;
+  min-width: 320px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.detail-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.clear-btn {
+  font-size: 12px;
+}
+
+.graph-container {
   width: 100%;
+  height: 100%;
+  min-height: 560px;
+}
+
+.graph-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  background: rgba(10, 15, 28, 0.35);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.loading-icon {
+  font-size: 18px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state {
@@ -275,5 +463,16 @@ onUnmounted(() => {
 .empty-state p {
   margin: 0;
   font-size: 14px;
+}
+
+@media (max-width: 1200px) {
+  .graph-body {
+    flex-direction: column;
+  }
+
+  .detail-panel {
+    min-width: 0;
+    min-height: 320px;
+  }
 }
 </style>

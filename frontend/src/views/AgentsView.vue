@@ -20,7 +20,7 @@
                 <el-icon size="32"><CircleCheck /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ $t('risk.low') }}</span>
+                <span class="stat-label">{{ $t('agents.risk.low') }}</span>
                 <span class="stat-value">{{ riskStats.low }}</span>
               </div>
             </div>
@@ -36,7 +36,7 @@
                 <el-icon size="32"><Warning /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ $t('risk.medium') }}</span>
+                <span class="stat-label">{{ $t('agents.risk.medium') }}</span>
                 <span class="stat-value">{{ riskStats.medium }}</span>
               </div>
             </div>
@@ -52,7 +52,7 @@
                 <el-icon size="32"><CircleClose /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ $t('risk.high') }}</span>
+                <span class="stat-label">{{ $t('agents.risk.high') }}</span>
                 <span class="stat-value">{{ riskStats.high }}</span>
               </div>
             </div>
@@ -68,7 +68,7 @@
                 <el-icon size="32"><WarningFilled /></el-icon>
               </div>
               <div class="stat-info">
-                <span class="stat-label">{{ $t('risk.critical') }}</span>
+                <span class="stat-label">{{ $t('agents.risk.critical') }}</span>
                 <span class="stat-value">{{ riskStats.critical }}</span>
               </div>
             </div>
@@ -286,12 +286,15 @@ const highRiskPosts = computed(() => {
  */
 const getAgentRiskLevel = (agent: any) => {
   if (!agent) return 'low'
+  const score = Number(agent.avg_conspiracy_7d)
+  if (Number.isFinite(score)) {
+    if (score >= 10) return 'critical'
+    if (score >= 8) return 'high'
+    if (score >= 4) return 'medium'
+    return 'low'
+  }
   const raw = (agent.risk_level || '').trim()
   if (raw) return raw
-  const score = Number(agent.avg_conspiracy_7d ?? 0)
-  if (score >= 7) return 'critical'
-  if (score >= 4) return 'high'
-  if (score >= 2) return 'medium'
   return 'low'
 }
 
@@ -333,12 +336,15 @@ const getScoreClass = (agent: any): string => {
  */
 const getPostRiskLevel = (post: any) => {
   if (!post) return 'low'
+  const score = Number(post.conspiracy_score)
+  if (Number.isFinite(score)) {
+    if (score >= 10) return 'critical'
+    if (score >= 8) return 'high'
+    if (score >= 4) return 'medium'
+    return 'low'
+  }
   const raw = (post.risk_level || '').trim()
   if (raw) return raw
-  const score = Number(post.conspiracy_score ?? 0)
-  if (score >= 7) return 'critical'
-  if (score >= 4) return 'high'
-  if (score >= 2) return 'medium'
   return 'low'
 }
 
@@ -566,7 +572,7 @@ onUnmounted(() => {
 .stats-grid, .risk-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 20px;
   margin-bottom: 32px;
 }
 
@@ -575,19 +581,15 @@ onUnmounted(() => {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  border-color: var(--accent-primary);
+  border-color: var(--border-glow);
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
 }
 
@@ -609,18 +611,23 @@ onUnmounted(() => {
 .card-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.stat-icon :deep(svg) {
+  width: 32px;
+  height: 32px;
 }
 
 .stat-icon.green {
@@ -650,14 +657,14 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
 }

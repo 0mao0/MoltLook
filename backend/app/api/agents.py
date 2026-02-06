@@ -74,9 +74,18 @@ async def get_agents(
             # 默认按最后活跃时间降序排列，确保最新活跃的 Agent 排在前面
             order_clause = "ORDER BY last_active DESC, pagerank_score DESC"
             
-            if risk_level in ('high', 'critical'):
-                # 高风险和极高风险额外按阴谋指数降序排列
-                order_clause = "ORDER BY avg_conspiracy_7d DESC, last_active DESC, post_count DESC"
+            if risk_level in ('medium', 'high', 'critical'):
+                # 中风险及以上，按危险指数降序排列，确保风险最高的排在最前面
+                order_clause = (
+                    "ORDER BY ("
+                    "COALESCE(avg_conspiracy_7d, 0) * 5 + "
+                    "COALESCE(pagerank_score, 0) * 50 + "
+                    "MIN(20, sqrt(COALESCE(post_count, 0)) * 3)"
+                    ") DESC, last_active DESC"
+                )
+            elif risk_level == 'low':
+                # 低风险按最后活跃时间排序即可
+                order_clause = "ORDER BY last_active DESC, pagerank_score DESC"
             
             # 获取分页数据
             query = f"""
@@ -218,18 +227,16 @@ async def get_agents_risk_stats():
     """
     获取 Agent 风险分布统计
     
-    基于 avg_conspiracy_7d 动态计算风险等级：
-    - critical: avg_conspiracy_7d >= 8
-    - high: 5 <= avg_conspiracy_7d < 8
-    - medium: 3 <= avg_conspiracy_7d < 5
-    - low: avg_conspiracy_7d < 3
+    Based on avg_conspiracy_7d or risk_level column.
+    We'll query the pre-calculated risk_level column for accuracy as it includes
+    complex logic (like post count ratios) from the collector.
     """
     try:
         async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
             await db.execute("PRAGMA busy_timeout = 5000;")
             
             cursor = await db.execute("""
-                SELECT avg_conspiracy_7d FROM agents
+                SELECT risk_level, COUNT(*) FROM agents GROUP BY risk_level
             """)
             rows = await cursor.fetchall()
             
@@ -241,15 +248,10 @@ async def get_agents_risk_stats():
             }
             
             for row in rows:
-                conspiracy = row[0] or 0
-                if conspiracy >= 8:
-                    distribution["critical"] += 1
-                elif conspiracy >= 5:
-                    distribution["high"] += 1
-                elif conspiracy >= 3:
-                    distribution["medium"] += 1
-                else:
-                    distribution["low"] += 1
+                level = row[0]
+                count = row[1]
+                if level in distribution:
+                    distribution[level] = count
             
             return distribution
             

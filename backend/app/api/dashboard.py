@@ -55,15 +55,15 @@ async def get_dashboard():
             avg_risk = round(row[2] or 0, 2)
             
             # 确定风险等级：基于平均阴谋指数
-            # ≥8: critical (极高风险)
-            # 5-8: high (高风险)
-            # 3-5: medium (中风险)
-            # <3: low (低风险)
-            if avg_risk >= 8:
+            # ≥10: critical (极高风险)
+            # 8-9: high (高风险)
+            # 4-7: medium (中风险)
+            # 0-3: low (低风险)
+            if avg_risk >= 10:
                 risk_level = "critical"
-            elif avg_risk >= 5:
+            elif avg_risk >= 8:
                 risk_level = "high"
-            elif avg_risk >= 3:
+            elif avg_risk >= 4:
                 risk_level = "medium"
             else:
                 risk_level = "low"
@@ -79,7 +79,7 @@ async def get_dashboard():
             # 最近 7 天趋势
             cursor = await db.execute("""
                 SELECT date(datetime(created_at, 'unixepoch')) as date,
-                       COUNT(CASE WHEN conspiracy_score >= 3 THEN 1 END) as danger
+                       COUNT(CASE WHEN conspiracy_score >= 4 THEN 1 END) as danger
                 FROM posts 
                 WHERE created_at > strftime('%s', 'now', '-7 days')
                 GROUP BY date
@@ -170,15 +170,15 @@ async def get_dashboard_stats(days: int = 7):
             high_risk_count_24h = (await cursor.fetchone())[0]
             
             # 确定风险等级：基于平均阴谋指数
-            # ≥8: critical (极高风险)
-            # 5-8: high (高风险)
-            # 3-5: medium (中风险)
-            # <3: low (低风险)
-            if avg_risk_24h >= 8:
+            # ≥10: critical (极高风险)
+            # 8-9: high (高风险)
+            # 4-7: medium (中风险)
+            # 0-3: low (低风险)
+            if avg_risk_24h >= 10:
                 risk_level = "critical"
-            elif avg_risk_24h >= 5:
+            elif avg_risk_24h >= 8:
                 risk_level = "high"
-            elif avg_risk_24h >= 3:
+            elif avg_risk_24h >= 4:
                 risk_level = "medium"
             else:
                 risk_level = "low"
@@ -318,7 +318,7 @@ async def get_risk_distribution():
 async def get_dashboard_network_graph():
     """
     获取Dashboard关系图数据
-    返回所有有互动关系的Agent网络
+    返回最多1000个Agent的网络数据（包含孤立节点）
     危险指数计算规则（0-100）：
       - 阴谋指数（avg_conspiracy_7d * 10）：0-50分
       - 互动影响力（pagerank_score * 50）：0-30分  
@@ -329,7 +329,7 @@ async def get_dashboard_network_graph():
             db.row_factory = aiosqlite.Row
             await db.execute("PRAGMA busy_timeout = 5000;")
             
-            # 获取所有有互动关系的Agent
+            # 获取最多1000个Agent（优先按风险排序），允许无互动的节点进入图中
             cursor = await db.execute("""
                 SELECT 
                     a.id, a.name, a.risk_level, a.avg_conspiracy_7d, 
@@ -345,26 +345,32 @@ async def get_dashboard_network_graph():
                     SELECT target_id, COUNT(*) as in_count 
                     FROM interactions GROUP BY target_id
                 ) in_conn ON a.id = in_conn.target_id
-                WHERE out_conn.out_count > 0 OR in_conn.in_count > 0
                 ORDER BY a.avg_conspiracy_7d DESC
-                LIMIT 100
+                LIMIT 1000
             """)
             agents_with_interactions = await cursor.fetchall()
             
+            # 获取全局统计数据
+            cursor = await db.execute("SELECT COUNT(*) FROM agents")
+            global_total_agents = (await cursor.fetchone())[0]
+            cursor = await db.execute("SELECT COUNT(*) FROM interactions")
+            global_total_interactions = (await cursor.fetchone())[0]
+            
+            # 如果没有互动关系的Agent，直接返回全局统计
             if not agents_with_interactions:
-                return {"nodes": [], "edges": [], "stats": {"total_agents": 0, "total_interactions": 0}}
+                return {"nodes": [], "edges": [], "stats": {"total_agents": global_total_agents, "total_interactions": global_total_interactions}}
             
             agent_ids = [r["id"] for r in agents_with_interactions]
             placeholders = ",".join("?" * len(agent_ids))
             
-            # 获取所有互动关系
+            # 获取所有互动关系，适当增加边的上限以配合1000个节点
             cursor = await db.execute(f"""
                 SELECT source_id, target_id, COUNT(*) as weight
                 FROM interactions
                 WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})
                 GROUP BY source_id, target_id
                 ORDER BY weight DESC
-                LIMIT 150
+                LIMIT 2000
             """, agent_ids + agent_ids)
             interactions = await cursor.fetchall()
             
@@ -385,29 +391,34 @@ async def get_dashboard_network_graph():
                 interaction_score = min(20, (0 if total_interactions == 0 else total_interactions ** 0.5 * 3))
                 danger_index = round(conspiracy_score + pagerank_score + interaction_score, 1)
                 
-                # 根据危险指数设置颜色（0-100）
-                # 低风险(green) → 中风险(yellow) → 高风险(orange) → 极高风险(red)
-                if danger_index >= 70:
-                    color = "#dc2626"  # 红色 - 极高风险
-                elif danger_index >= 50:
-                    color = "#f97316"  # 橙色 - 高风险
-                elif danger_index >= 25:
-                    color = "#eab308"  # 黄色 - 中风险
+                if total_interactions == 0:
+                    # 孤立节点：非常小的灰色点
+                    color = "#6b7280"
+                    size = 3
                 else:
-                    color = "#22c55e"  # 绿色 - 低风险
+                    # 根据危险指数设置颜色（0-100）
+                    # 低风险(green) → 中风险(yellow) → 高风险(orange) → 极高风险(red)
+                    if danger_index >= 70:
+                        color = "#dc2626"  # 红色 - 极高风险
+                    elif danger_index >= 50:
+                        color = "#f97316"  # 橙色 - 高风险
+                    elif danger_index >= 25:
+                        color = "#eab308"  # 黄色 - 中风险
+                    else:
+                        color = "#22c55e"  # 绿色 - 低风险
+                    
+                    # 根据危险指数设置节点大小（5-60）
+                    # 使用指数缩放，让低风险 Agent 节点更小
+                    if danger_index < 25:
+                        size = 5 + (danger_index / 25) * 15  # 5-20
+                    elif danger_index < 50:
+                        size = 20 + ((danger_index - 25) / 25) * 15  # 20-35
+                    elif danger_index < 70:
+                        size = 35 + ((danger_index - 50) / 20) * 15  # 35-50
+                    else:
+                        size = 50 + ((danger_index - 70) / 30) * 10  # 50-60
                 
-                # 根据危险指数设置节点大小（10-60）
-                # 使用指数缩放，让低风险 Agent 节点更小
-                if danger_index < 25:
-                    size = 10 + (danger_index / 25) * 15  # 10-25
-                elif danger_index < 50:
-                    size = 25 + ((danger_index - 25) / 25) * 15  # 25-40
-                elif danger_index < 70:
-                    size = 40 + ((danger_index - 50) / 20) * 10  # 40-50
-                else:
-                    size = 50 + ((danger_index - 70) / 30) * 10  # 50-60
-                
-                size = int(min(60, max(10, size)))
+                size = int(min(60, max(3, size)))
                 
                 # 合成名称
                 name = r["name"] or agent_id

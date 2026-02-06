@@ -47,7 +47,13 @@ export const messages = {
       detailTitle: '帖子详情',
       retainedLimit: '保留1000条',
       analysisFailed: '分析失败',
-      translationTimeout: '请求超时'
+      translationTimeout: '请求超时',
+      risk: {
+        low: '低风险帖子',
+        medium: '中风险帖子',
+        high: '高风险帖子',
+        critical: '极高风险帖子'
+      }
     },
     agents: {
       title: 'Agent 列表',
@@ -56,7 +62,13 @@ export const messages = {
       noPosts: '暂无发言记录',
       noConnections: '暂无记录',
       aiAnalyze: 'AI分析此Robot',
-      aiAnalysisResult: 'AI 风险分析'
+      aiAnalysisResult: 'AI 风险分析',
+      risk: {
+        low: '低风险 Agent',
+        medium: '中风险 Agent',
+        high: '高风险 Agent',
+        critical: '极高风险 Agent'
+      }
     },
     dashboard: {
       currentRiskLevel: '当前风险等级',
@@ -64,6 +76,7 @@ export const messages = {
       activeAgents: '活跃 Agent',
       highRiskPosts: '高危帖子',
       avgConspiracy: '平均阴谋指数',
+      influence: '互动影响力',
       monitoring: '实时监控中',
       needAttention: '需要关注',
       trendTitle: '7天高风险比例趋势',
@@ -166,7 +179,13 @@ export const messages = {
       detailTitle: 'Post Details',
       retainedLimit: 'Kept 1000',
       analysisFailed: 'Analysis failed',
-      translationTimeout: 'Request timed out'
+      translationTimeout: 'Request timed out',
+      risk: {
+        low: 'Low Risk Comment',
+        medium: 'Medium Risk Comment',
+        high: 'High Risk Comment',
+        critical: 'Critical Comment'
+      }
     },
     agents: {
       title: 'Agent List',
@@ -175,7 +194,13 @@ export const messages = {
       noPosts: 'No recent posts',
       noConnections: 'No records',
       aiAnalyze: 'AI Analyze',
-      aiAnalysisResult: 'AI Risk Analysis'
+      aiAnalysisResult: 'AI Risk Analysis',
+      risk: {
+        low: 'Low Risk Agent',
+        medium: 'Medium Risk Agent',
+        high: 'High Risk Agent',
+        critical: 'Critical Agent'
+      }
     },
     dashboard: {
       currentRiskLevel: 'Current Risk Level',
@@ -183,6 +208,7 @@ export const messages = {
       activeAgents: 'Active Agents',
       highRiskPosts: 'Critical Posts',
       avgConspiracy: 'Avg Conspiracy Score',
+      influence: 'Influence',
       monitoring: 'Live Monitoring',
       needAttention: 'Needs Attention',
       trendTitle: '7-Day High Risk Ratio Trend',
