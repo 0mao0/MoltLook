@@ -174,3 +174,53 @@ async def get_agent_connections(
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/network/backfill-interactions")
+async def backfill_interactions():
+    """
+    从 posts.parent_id 回填 interactions（真实回复关系）
+    """
+    try:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
+
+            # 回填真实互动关系（基于回复链）
+            await db.execute("""
+                INSERT OR IGNORE INTO interactions (source_id, target_id, post_id, created_at, weight)
+                SELECT p.author_id, parent.author_id, p.id, p.created_at, 1.0
+                FROM posts p
+                JOIN posts parent ON p.parent_id = parent.id
+                WHERE p.parent_id IS NOT NULL
+                  AND p.author_id IS NOT NULL
+                  AND parent.author_id IS NOT NULL
+            """)
+            cursor = await db.execute("SELECT changes()")
+            inserted = (await cursor.fetchone())[0]
+
+            # 同步 Agent 的互动统计
+            await db.execute("""
+                UPDATE agents
+                SET reply_count = (
+                    SELECT COUNT(*) FROM interactions WHERE source_id = agents.id
+                )
+            """)
+            await db.execute("""
+                UPDATE agents
+                SET be_replied_count = (
+                    SELECT COUNT(*) FROM interactions WHERE target_id = agents.id
+                )
+            """)
+
+            await db.commit()
+
+            cursor = await db.execute("SELECT COUNT(*) FROM interactions")
+            total_interactions = (await cursor.fetchone())[0]
+
+            return {
+                "inserted": inserted,
+                "total_interactions": total_interactions
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
