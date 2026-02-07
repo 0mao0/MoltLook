@@ -71,21 +71,14 @@ async def get_agents(
             total_count = (await cursor.fetchone())[0]
             
             # 构建排序条件
-            # 默认按最后活跃时间降序排列，确保最新活跃的 Agent 排在前面
-            order_clause = "ORDER BY last_active DESC, pagerank_score DESC"
-            
-            if risk_level in ('medium', 'high', 'critical'):
-                # 中风险及以上，按危险指数降序排列，确保风险最高的排在最前面
-                order_clause = (
-                    "ORDER BY ("
-                    "COALESCE(avg_conspiracy_7d, 0) * 5 + "
-                    "COALESCE(pagerank_score, 0) * 50 + "
-                    "MIN(20, sqrt(COALESCE(post_count, 0)) * 3)"
-                    ") DESC, last_active DESC"
-                )
-            elif risk_level == 'low':
-                # 低风险按最后活跃时间排序即可
-                order_clause = "ORDER BY last_active DESC, pagerank_score DESC"
+            # 所有风险等级都按危险指数降序排列，确保风险最高的排在前面
+            order_clause = (
+                "ORDER BY ("
+                "COALESCE(avg_conspiracy_7d, 0) * 5 + "
+                "COALESCE(pagerank_score, 0) * 50 + "
+                "MIN(20, sqrt(COALESCE(post_count, 0)) * 3)"
+                ") DESC, last_active DESC"
+            )
             
             # 获取分页数据
             query = f"""
@@ -200,7 +193,7 @@ async def get_agent(agent_id: str):
                     {
                         "id": p["id"],
                         "author_id": agent_id,
-                        "content": p["content"],
+                        "content": p["content"][:10000] if p["content"] else None,
                         "content_length": p["content_length"],
                         "conspiracy_score": p["conspiracy_score"],
                         "sentiment": p["sentiment"],

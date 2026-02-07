@@ -327,54 +327,111 @@ class Collector:
             await db.execute("PRAGMA journal_mode=WAL;")
             await db.execute("PRAGMA busy_timeout = 5000;")
             
+            # 批量保存所有帖子
+            post_ids = []
             for post in posts:
                 try:
-                    # 提取特征
                     features = feature_extractor.extract_features(post)
-                    
-                    # 保存帖子
                     is_new = await self.save_post(db, features)
-                    
                     if is_new:
                         new_count += 1
-                        
-                        # 如果是回复，保存互动关系
-                        if features.get("parent_id"):
-                            target_author_id = features.get("parent_author_id")
-                            
-                            if not target_author_id:
-                                # 如果特征提取没拿到，再查数据库
-                                cursor = await db.execute(
-                                    "SELECT author_id FROM posts WHERE id = ?",
-                                    (features["parent_id"],)
-                                )
-                                parent_row = await cursor.fetchone()
-                                if parent_row:
-                                    target_author_id = parent_row[0]
-                            
-                            if target_author_id:
-                                await self.save_interaction(
-                                    db,
-                                    features["author_id"],
-                                    target_author_id,
-                                    features["id"],
-                                    features["created_at"]
-                                )
-                            else:
-                                # 仍然没找到，可能是跨分区的回复或旧帖子
-                                logger.debug(f"Parent author not found for post {features['id']}")
-                    
+                        post_ids.append(features["id"])
                 except Exception as e:
                     logger.error(f"Error processing post {post.get('id')}: {e}")
                     continue
             
+            # 处理互动关系
+            if post_ids:
+                await self._build_interactions(db, post_ids)
+            
             if new_count > 0:
                 await self.cleanup_old_posts(db)
             
-            # 显式提交所有更改
             await db.commit()
         
         return new_count
+    
+    async def _build_interactions(self, db: aiosqlite.Connection, post_ids: List[str]):
+        """
+        批量构建互动关系
+        
+        遍历所有新帖子，查找：
+        1. parent_id 指向的父帖子 -> 获取回复关系
+        2. 被其他帖子回复 -> 获取被回复关系
+        """
+        if not post_ids:
+            return
+        
+        placeholders = ",".join("?" * len(post_ids))
+        
+        try:
+            # 获取所有新帖子的 parent_id
+            cursor = await db.execute(
+                f"SELECT id, parent_id, author_id FROM posts WHERE id IN ({placeholders})",
+                post_ids
+            )
+            posts_with_parent = await cursor.fetchall()
+            
+            for post_row in posts_with_parent:
+                post_id, parent_id, author_id = post_row
+                
+                # 1. 如果有 parent_id，获取回复关系
+                if parent_id and author_id:
+                    cursor = await db.execute(
+                        "SELECT author_id FROM posts WHERE id = ?",
+                        (parent_id,)
+                    )
+                    parent_row = await cursor.fetchone()
+                    
+                    if parent_row and parent_row[0] and parent_row[0] != author_id:
+                        target_id = parent_row[0]
+                        await self.save_interaction(
+                            db,
+                            author_id,
+                            target_id,
+                            post_id,
+                            int(time.time())
+                        )
+                        logger.debug(f"Saved interaction: {author_id[:8]} -> {target_id[:8]}")
+            
+            # 2. 检查新帖子是否被现有帖子回复（即这些帖子出现在其他帖子的 parent_id 中）
+            # 这里我们反向查找：看有没有帖子以这些新帖子为 parent_id
+            cursor = await db.execute(
+                f"SELECT DISTINCT parent_id FROM posts WHERE parent_id IN ({placeholders}) AND parent_id IS NOT NULL",
+                post_ids
+            )
+            replied_posts = await cursor.fetchall()
+            
+            for (replied_parent_id,) in replied_posts:
+                if replied_parent_id:
+                    # 获取所有回复了这个帖子的作者
+                    cursor = await db.execute(
+                        f"SELECT DISTINCT author_id FROM posts WHERE parent_id = ?",
+                        (replied_parent_id,)
+                    )
+                    repliers = await cursor.fetchall()
+                    
+                    for (replier_id,) in repliers:
+                        if replier_id and replier_id != replied_parent_id:
+                            # 获取第一条回复作为互动记录
+                            cursor = await db.execute(
+                                "SELECT id FROM posts WHERE parent_id = ? AND author_id = ? LIMIT 1",
+                                (replied_parent_id, replier_id)
+                            )
+                            reply_row = await cursor.fetchone()
+                            
+                            if reply_row:
+                                await self.save_interaction(
+                                    db,
+                                    replier_id,
+                                    replied_parent_id,
+                                    reply_row[0],
+                                    int(time.time())
+                                )
+                                logger.debug(f"Saved interaction (replied): {replier_id[:8]} -> {replied_parent_id[:8]}")
+        
+        except Exception as e:
+            logger.error(f"Error building interactions: {e}")
     
     async def collection_task(self):
         """采集任务 - 60秒循环"""
@@ -525,6 +582,59 @@ Monitoring the network... 🦞"""
             logger.error(f"Error generating observation post: {e}")
             return None
     
+    async def sync_comments_task(self):
+        """同步评论互动任务 - 每小时循环"""
+        logger.info("Starting comments sync task...")
+        
+        await asyncio.sleep(300)  # 首次延迟 5 分钟
+        
+        while self.running:
+            try:
+                async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                    await db.execute("PRAGMA busy_timeout = 5000;")
+                    
+                    cursor = await db.execute(
+                        "SELECT id, name FROM agents WHERE name != id AND name IS NOT NULL AND name != 'unknown' LIMIT 50"
+                    )
+                    agents = await cursor.fetchall()
+                    
+                    for agent_id, agent_name in agents:
+                        try:
+                            profile = await self.api.get_agent_profile(agent_name)
+                            
+                            if profile and profile.get('success'):
+                                comments = profile.get('recentComments', [])
+                                
+                                for comment in comments:
+                                    post_id = comment.get('post_id')
+                                    content = comment.get('content', '')
+                                    parent_post = comment.get('parent_post', {})
+                                    
+                                    if parent_post and 'author' in parent_post:
+                                        target_author = parent_post.get('author', {})
+                                        target_id = target_author.get('id') or target_author.get('name')
+                                        
+                                        if target_id and post_id:
+                                            await self.save_interaction(
+                                                db,
+                                                agent_id,
+                                                target_id,
+                                                post_id,
+                                                int(time.time())
+                                            )
+                                            logger.debug(f"Saved comment interaction: {agent_name[:16]} -> {str(target_id)[:16]}")
+                        
+                        except Exception as e:
+                            logger.debug(f"Error syncing comments for {agent_name}: {e}")
+                            continue
+                    
+                    logger.info("Comments sync completed")
+                    
+            except Exception as e:
+                logger.error(f"Comments sync error: {e}")
+            
+            await asyncio.sleep(3600)  # 每小时同步一次
+    
     async def run(self):
         """运行采集器"""
         logger.info("=" * 60)
@@ -533,16 +643,15 @@ Monitoring the network... 🦞"""
         logger.info(f"Database: {self.db_path}")
         logger.info("=" * 60)
         
-        # 初始化数据库
         await self.init_db()
         
         self.running = True
         
-        # 启动三个任务
         await asyncio.gather(
             self.collection_task(),
             self.status_check_task(),
-            self.engagement_task()
+            self.engagement_task(),
+            self.sync_comments_task()
         )
     
     def stop(self):

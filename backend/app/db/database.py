@@ -87,6 +87,27 @@ class Database:
                 url TEXT
             )
         """)
+
+        # 兼容旧库：补齐缺失列
+        cursor = await conn.execute("PRAGMA table_info(posts)")
+        post_columns = {row[1] for row in await cursor.fetchall()}
+        post_missing_columns = {
+            "content_length": "INTEGER DEFAULT 0",
+            "parent_id": "TEXT",
+            "submolt": "TEXT DEFAULT 'general'",
+            "fetched_at": "INTEGER DEFAULT 0",
+            "conspiracy_score": "INTEGER DEFAULT 0",
+            "sentiment": "REAL DEFAULT 0",
+            "llm_analyzed": "INTEGER DEFAULT 0",
+            "intent": "TEXT",
+            "risk_level": "TEXT",
+            "summary": "TEXT",
+            "url": "TEXT",
+            "title": "TEXT"
+        }
+        for col, col_def in post_missing_columns.items():
+            if col not in post_columns:
+                await conn.execute(f"ALTER TABLE posts ADD COLUMN {col} {col_def}")
         
         # 创建 posts 表索引
         await conn.execute("""
@@ -162,6 +183,26 @@ class Database:
                 description TEXT
             )
         """)
+
+        # 兼容旧库：补齐 agents 缺失列
+        cursor = await conn.execute("PRAGMA table_info(agents)")
+        agent_columns = {row[1] for row in await cursor.fetchall()}
+        agent_missing_columns = {
+            "name": "TEXT DEFAULT 'unknown'",
+            "first_seen": "INTEGER DEFAULT 0",
+            "last_active": "INTEGER",
+            "post_count": "INTEGER DEFAULT 0",
+            "reply_count": "INTEGER DEFAULT 0",
+            "be_replied_count": "INTEGER DEFAULT 0",
+            "pagerank_score": "REAL DEFAULT 0",
+            "community_id": "INTEGER DEFAULT -1",
+            "risk_level": "TEXT DEFAULT 'low'",
+            "avg_conspiracy_7d": "REAL DEFAULT 0",
+            "description": "TEXT"
+        }
+        for col, col_def in agent_missing_columns.items():
+            if col not in agent_columns:
+                await conn.execute(f"ALTER TABLE agents ADD COLUMN {col} {col_def}")
         
         # 创建 agents 表索引
         await conn.execute("""

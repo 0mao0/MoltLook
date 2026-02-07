@@ -314,11 +314,38 @@ async def get_risk_distribution():
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@router.get("/debug/db-info")
+async def get_db_info():
+    """
+    调试：返回当前数据库路径和关键表统计
+    """
+    try:
+        async with aiosqlite.connect(settings.DB_PATH, timeout=30) as db:
+            await db.execute("PRAGMA busy_timeout = 5000;")
+            cursor = await db.execute("SELECT COUNT(*) FROM posts")
+            posts_count = (await cursor.fetchone())[0]
+            cursor = await db.execute("SELECT COUNT(*) FROM agents")
+            agents_count = (await cursor.fetchone())[0]
+            cursor = await db.execute("SELECT COUNT(*) FROM interactions")
+            interactions_count = (await cursor.fetchone())[0]
+
+            return {
+                "db_path": str(settings.DB_PATH),
+                "db_exists": settings.DB_PATH.exists(),
+                "posts": posts_count,
+                "agents": agents_count,
+                "interactions": interactions_count
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
 @router.get("/dashboard/network-graph")
 async def get_dashboard_network_graph():
     """
     获取Dashboard关系图数据
-    返回最多1000个Agent的网络数据（包含孤立节点）
+    返回最多1000个Agent的网络数据（仅包含有互动关系的节点）
     危险指数计算规则（0-100）：
       - 阴谋指数（avg_conspiracy_7d * 10）：0-50分
       - 互动影响力（pagerank_score * 50）：0-30分  
@@ -329,7 +356,7 @@ async def get_dashboard_network_graph():
             db.row_factory = aiosqlite.Row
             await db.execute("PRAGMA busy_timeout = 5000;")
             
-            # 获取最多1000个Agent（优先按风险排序），允许无互动的节点进入图中
+            # 获取最多1000个Agent（优先按风险排序），仅保留有互动关系的节点
             cursor = await db.execute("""
                 SELECT 
                     a.id, a.name, a.risk_level, a.avg_conspiracy_7d, 
@@ -345,6 +372,7 @@ async def get_dashboard_network_graph():
                     SELECT target_id, COUNT(*) as in_count 
                     FROM interactions GROUP BY target_id
                 ) in_conn ON a.id = in_conn.target_id
+                WHERE COALESCE(out_conn.out_count, 0) + COALESCE(in_conn.in_count, 0) > 0
                 ORDER BY a.avg_conspiracy_7d DESC
                 LIMIT 1000
             """)

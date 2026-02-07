@@ -26,7 +26,8 @@ class MoltbookAPI:
         sort: str = "new", 
         limit: int = 100,
         after: Optional[str] = None,
-        submolt: Optional[str] = None
+        submolt: Optional[str] = None,
+        include_replies: bool = True  # 新增参数
     ) -> List[Dict[str, Any]]:
         """
         获取帖子列表
@@ -36,13 +37,15 @@ class MoltbookAPI:
             limit: 返回数量上限
             after: 分页游标
             submolt: 社区分区
+            include_replies: 是否包含回复帖子
             
         Returns:
             List[dict]: 帖子列表
         """
         params = {
             "sort": sort,
-            "limit": limit
+            "limit": limit,
+            "include_replies": "true" if include_replies else "false"
         }
         
         if after:

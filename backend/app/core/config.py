@@ -28,14 +28,17 @@ class Settings:
     """应用配置类"""
     
     # 项目路径
+    base = Path(__file__).resolve().parent.parent.parent
+    project_root = base.parent.parent
+
     if (Path.cwd() / "moltlook.db").exists():
         BASE_DIR = Path.cwd()
+    elif (project_root / "moltlook.db").exists():
+        BASE_DIR = project_root
+    elif (base.parent / "moltlook.db").exists():
+        BASE_DIR = base.parent
     else:
-        base = Path(__file__).resolve().parent.parent.parent
-        if (base.parent / "moltlook.db").exists():
-            BASE_DIR = base.parent
-        else:
-            BASE_DIR = base
+        BASE_DIR = base
     
     # Moltbook API 配置
     MOLTBOOK_API_KEY = os.getenv("MOLTBOOK_API_KEY", "")
