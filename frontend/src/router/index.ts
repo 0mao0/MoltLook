@@ -26,6 +26,12 @@ const router = createRouter({
       component: () => import('../views/AgentsView.vue'),
       meta: { title: messages.zh.menu.agents, titleEn: messages.en.menu.agents }
     },
+    {
+      path: '/daily-news',
+      name: 'daily-news',
+      component: () => import('../views/DailyNewsView.vue'),
+      meta: { title: messages.zh.menu.dailyNews, titleEn: messages.en.menu.dailyNews }
+    },
   ],
 })
 

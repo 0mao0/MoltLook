@@ -21,13 +21,10 @@ if errorlevel 1 (
     exit /b
 )
 
-echo [1/3] Starting Backend API...
-start "MoltLook API" cmd /k "cd backend && (if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat) && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+echo [1/2] Starting Backend (API + Scheduler)...
+start "MoltLook Backend" cmd /k "cd backend && (if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat) && python api.py"
 
-echo [2/3] Starting Data Collector...
-start "MoltLook Collector" cmd /k "cd backend && (if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat) && python collector.py"
-
-echo [3/3] Starting Frontend Service...
+echo [2/2] Starting Frontend Service...
 start "MoltLook Frontend" cmd /k "cd frontend && pnpm run serve"
 
 echo.

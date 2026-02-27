@@ -158,7 +158,7 @@ const fetchNetworkStats = async () => {
     stats.value = {
       monitored_posts: data.total_posts || 0,
       monitored_agents: data.total_agents || 0,
-      processed_connections: data.total_connections || 0
+      processed_connections: data.interactions || 0
     }
   } catch (error) {
     console.error('Failed to fetch network stats:', error)

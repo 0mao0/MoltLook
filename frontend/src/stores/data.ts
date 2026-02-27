@@ -51,7 +51,7 @@ export const useDataStore = defineStore('data', () => {
     try {
       const requestParams: any = {
         page: params?.page,
-        page_size: params?.pageSize,
+        pageSize: params?.pageSize,
         min_score: params?.min_score
       }
       
@@ -64,8 +64,9 @@ export const useDataStore = defineStore('data', () => {
       }
       
       const res = await feedApi.getFeed(requestParams)
-      posts.value = res.data?.posts || []
-      feedTotal.value = res.data?.total || 0
+      const data = res.data
+      posts.value = data?.items || []
+      feedTotal.value = data?.total || 0
       
       if (agents.value.length === 0) {
         await fetchAgents()
@@ -106,15 +107,9 @@ export const useDataStore = defineStore('data', () => {
       })
       const data = res.data
       
-      // 处理新的响应格式 { agents: [], total: 0, page: 1, page_size: 10 }
-      if (data && data.agents && Array.isArray(data.agents)) {
-        agents.value = data.agents.filter((item: any) => item && item.id)
-        // 如果需要总数，可以存储起来
-        if (data.total !== undefined) {
-          // 可以在需要时使用 data.total
-        }
+      if (data && data.items && Array.isArray(data.items)) {
+        agents.value = data.items.filter((item: any) => item && item.id)
       } else if (Array.isArray(data)) {
-        // 兼容旧格式
         agents.value = data.filter((item: any) => item && item.id)
       } else {
         agents.value = []

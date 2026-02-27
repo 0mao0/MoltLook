@@ -8,7 +8,8 @@ export const messages = {
       dashboard: '数据看板',
       feed: '帖子流',
       agents: 'Agent 监控',
-      network: '关系网络'
+      network: '关系网络',
+      dailyNews: '每日新闻'
     },
     common: {
       english: 'English',
@@ -129,6 +130,22 @@ export const messages = {
       tech: '技术',
       spam: '垃圾信息',
       other: '其他'
+    },
+    dailyNews: {
+      title: '每日新闻',
+      subtitle: '查看历史推送的新闻内容',
+      history: '推送历史',
+      morning: '早报',
+      evening: '晚报',
+      newsUnit: '条',
+      selectRecord: '请选择一条推送记录',
+      timeRange: '时间范围',
+      newsCount: '新闻',
+      dangerCount: '危险言论',
+      topNews: '精选新闻',
+      dangerWarning: '危险言论预警',
+      importance: '重要性',
+      noTitle: '无标题'
     }
   },
   en: {
@@ -140,7 +157,8 @@ export const messages = {
       dashboard: 'Dashboard',
       feed: 'Feed',
       agents: 'Agent Monitor',
-      network: 'Network'
+      network: 'Network',
+      dailyNews: 'Daily News'
     },
     common: {
       english: 'English',
@@ -261,6 +279,22 @@ export const messages = {
       tech: 'Technology',
       spam: 'Spam',
       other: 'Other'
+    },
+    dailyNews: {
+      title: 'Daily News',
+      subtitle: 'View historical pushed news',
+      history: 'Push History',
+      morning: 'Morning',
+      evening: 'Evening',
+      newsUnit: 'items',
+      selectRecord: 'Select a push record',
+      timeRange: 'Time Range',
+      newsCount: 'News',
+      dangerCount: 'Dangerous',
+      topNews: 'Top News',
+      dangerWarning: 'Dangerous Content Warning',
+      importance: 'Importance',
+      noTitle: 'No Title'
     }
   }
 }

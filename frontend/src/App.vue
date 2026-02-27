@@ -7,7 +7,8 @@ import {
   Document, 
   UserFilled,
   Monitor,
-  Switch
+  Switch,
+  Reading
 } from '@element-plus/icons-vue'
 import { useLanguageStore } from '@/stores/language'
 
@@ -19,7 +20,8 @@ const activeMenu = computed(() => route.path)
 const menuItems = [
   { path: '/dashboard', name: 'dashboard', labelKey: 'menu.dashboard', icon: DataLine },
   { path: '/feed', name: 'feed', labelKey: 'menu.feed', icon: Document },
-  { path: '/agents', name: 'agents', labelKey: 'menu.agents', icon: UserFilled }
+  { path: '/agents', name: 'agents', labelKey: 'menu.agents', icon: UserFilled },
+  { path: '/daily-news', name: 'daily-news', labelKey: 'menu.dailyNews', icon: Reading }
 ]
 
 const toggleLanguage = () => {

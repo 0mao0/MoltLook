@@ -58,4 +58,10 @@ export const translationApi = {
     api.post('/analyze', { content, risk_level: riskLevel, target_lang: targetLang }, { timeout: 45000 })
 }
 
+// Daily News API
+export const dailyNewsApi = {
+  getPushRecords: (limit?: number) => api.get('/push-records', { params: { limit } }),
+  getPushRecord: (pushId: string) => api.get(`/push-records/${pushId}`)
+}
+
 export default api

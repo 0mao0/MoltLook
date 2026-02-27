@@ -2,13 +2,11 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: ../Dockerfile.backend
+    image: ghcr.io/你的用户名/moltlook-backend:main
     container_name: moltlook-backend
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/logs:/app/logs
+      - ./data:/app/data
+      - ./logs:/app/logs
       - ./.env:/app/.env:ro
     environment:
       - PYTHONPATH=/app
@@ -17,9 +15,7 @@ services:
     restart: always
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
+    image: ghcr.io/你的用户名/moltlook-frontend:main
     container_name: moltlook-frontend
     ports:
       - "8045:80"
