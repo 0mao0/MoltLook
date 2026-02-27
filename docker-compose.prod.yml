@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   backend:
-    image: ghcr.io/你的用户名/moltlook-backend:main
+    image: ghcr.io/0mao0/moltlook-backend:main
     container_name: moltlook-backend
     volumes:
       - ./data:/app/data
@@ -15,7 +15,7 @@ services:
     restart: always
 
   frontend:
-    image: ghcr.io/你的用户名/moltlook-frontend:main
+    image: ghcr.io/0mao0/moltlook-frontend:main
     container_name: moltlook-frontend
     ports:
       - "8045:80"
