@@ -4,18 +4,14 @@ services:
   backend:
     image: ghcr.io/0mao0/moltlook-backend:main
     container_name: moltlook-backend
+    network_mode: host
     volumes:
       - ./backend/data:/app/data
       - ./backend/logs:/app/logs
       - ./.env:/app/.env:ro
     environment:
       - PYTHONPATH=/app
-    expose:
-      - "8000"
     restart: always
-    dns:
-      - 8.8.8.8
-      - 114.114.114.114
 
   frontend:
     image: ghcr.io/0mao0/moltlook-frontend:main
