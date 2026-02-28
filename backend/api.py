@@ -75,6 +75,22 @@ async def get_feed(
     risk_level: Optional[str] = None
 ):
     """获取帖子列表"""
+    if risk_level:
+        danger_scores = {
+            'low': (0, 3),
+            'medium': (3, 5),
+            'high': (5, 8),
+            'critical': (8, 10)
+        }
+        score_range = danger_scores.get(risk_level)
+        if score_range:
+            posts = await db.get_dangerous_posts(
+                min_score=score_range[0],
+                max_score=score_range[1],
+                limit=pageSize
+            )
+            return {"data": {"items": posts, "total": len(posts), "page": page}}
+    
     posts = await db.get_top_news(limit=pageSize)
     return {"data": {"items": posts, "total": len(posts), "page": page}}
 
@@ -196,6 +212,7 @@ async def get_push_record(push_id: str):
     
     push_type = record.get("push_type")
     push_date = record.get("push_date")
+    news_count = record.get("news_count", 10)
     
     if push_type == "morning":
         date = datetime.strptime(push_date, "%Y-%m-%d")
@@ -211,7 +228,7 @@ async def get_push_record(push_id: str):
     end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%S")
     
     news_items = await db.get_top_news(
-        limit=20,
+        limit=news_count,
         start_time=start_time_str,
         end_time=end_time_str
     )

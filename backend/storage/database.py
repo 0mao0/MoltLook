@@ -505,6 +505,7 @@ class Database:
     async def get_dangerous_posts(
         self,
         min_score: int = 8,
+        max_score: Optional[int] = None,
         limit: int = 20,
         date: Optional[str] = None,
         start_time: Optional[str] = None,
@@ -515,6 +516,7 @@ class Database:
         
         Args:
             min_score: 最低危险分数
+            max_score: 最高危险分数
             limit: 数量限制
             date: 日期
             start_time: 开始时间 (ISO格式)
@@ -525,6 +527,10 @@ class Database:
             
             query = "SELECT * FROM dangerous_posts WHERE danger_score >= ?"
             params = [min_score]
+            
+            if max_score is not None:
+                query += " AND danger_score <= ?"
+                params.append(max_score)
             
             if date:
                 query += " AND date(created_at) = ?"

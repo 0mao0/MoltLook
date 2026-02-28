@@ -66,7 +66,13 @@
           <div class="news-section" v-if="newsItems.length > 0">
             <h3 class="section-title">{{ $t('dailyNews.topNews') }}</h3>
             <div class="news-list">
-              <div v-for="(item, index) in newsItems" :key="item.id" class="news-item">
+              <div 
+                v-for="(item, index) in newsItems" 
+                :key="item.id" 
+                class="news-item"
+                @click="openOriginalLink(item)"
+                style="cursor: pointer"
+              >
                 <div class="news-rank">{{ index + 1 }}</div>
                 <div class="news-main">
                   <div class="news-header">
@@ -137,6 +143,7 @@ interface NewsItem {
   category: string
   author_name: string
   importance_score: number
+  url?: string
 }
 
 interface DangerousPost {
@@ -146,6 +153,7 @@ interface DangerousPost {
   danger_score: number
   danger_type: string
   author_name: string
+  url?: string
 }
 
 const route = useRoute()
@@ -232,6 +240,14 @@ const selectRecord = async (record: PushRecord) => {
     console.error('Failed to fetch push record detail:', error)
   } finally {
     detailLoading.value = false
+  }
+}
+
+const openOriginalLink = (item: NewsItem) => {
+  if (item.url) {
+    window.open(item.url, '_blank')
+  } else if (item.id) {
+    window.open(`https://moltbook.com/post/${item.id}`, '_blank')
   }
 }
 

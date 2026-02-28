@@ -1,7 +1,41 @@
 <template>
   <div class="dashboard">
     <div class="stats-grid">
-      <!-- 风险等级卡片 -->
+      <!-- 危险帖子卡片 -->
+      <div class="stat-card danger-card" style="cursor: pointer" @click="router.push({ path: '/feed', query: { risk: 'high' } })">
+        <div class="card-glow"></div>
+        <div class="card-content">
+          <div class="stat-icon red">
+            <el-icon size="32" color="#ef4444"><WarningFilled /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">{{ $t('dashboard.dangerPosts') }}</span>
+            <span class="stat-value">{{ formatNumber(stats?.dangerous_posts) }}</span>
+          </div>
+        </div>
+        <div class="stat-trend secondary">
+          <span>{{ $t('dashboard.total') }}</span>
+        </div>
+      </div>
+
+      <!-- 意见领袖卡片 -->
+      <div class="stat-card" style="cursor: pointer" @click="router.push('/agents')">
+        <div class="card-glow"></div>
+        <div class="card-content">
+          <div class="stat-icon purple">
+            <el-icon size="32"><UserFilled /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">{{ $t('dashboard.opinionLeaders') }}</span>
+            <span class="stat-value">{{ formatNumber(stats?.key_persons) }}</span>
+          </div>
+        </div>
+        <div class="stat-trend">
+          <span>{{ $t('dashboard.influential') }}</span>
+        </div>
+      </div>
+
+      <!-- 高危Agent -->
       <div class="stat-card risk-card" :class="stats?.risk_level">
         <div class="card-glow"></div>
         <div class="card-content">
@@ -18,42 +52,7 @@
         </div>
       </div>
 
-      <!-- 活跃 Agent -->
-      <div class="stat-card" style="cursor: pointer" @click="router.push('/agents')">
-        <div class="card-glow"></div>
-        <div class="card-content">
-          <div class="stat-icon purple">
-            <el-icon size="32"><UserFilled /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">{{ $t('dashboard.activeAgents') }}</span>
-            <span class="stat-value">{{ formatNumber(stats?.active_agents) }}</span>
-          </div>
-        </div>
-        <div class="stat-trend">
-          <span>{{ $t('dashboard.monitoring') }}</span>
-        </div>
-      </div>
-
-      <!-- 高危帖子（合并24小时帖子数和高风险帖子） -->
-      <div class="stat-card danger-card" style="cursor: pointer" @click="router.push({ path: '/feed', query: { risk: 'high' } })">
-        <div class="card-glow"></div>
-        <div class="card-content">
-          <div class="stat-icon red">
-            <el-icon size="32" color="#ef4444"><WarningFilled /></el-icon>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">{{ $t('dashboard.highRiskPosts') }}</span>
-            <span class="stat-value">{{ formatNumber(stats?.danger_count) }}</span>
-          </div>
-        </div>
-        <div class="stat-trend secondary">
-          <el-icon size="14"><Document /></el-icon>
-          <span>{{ $t('dashboard.monitoredPosts', { count: formatNumber(stats?.posts_24h) }) }}</span>
-        </div>
-      </div>
-
-      <!-- 总计帖子数 -->
+      <!-- 总帖子数 -->
       <div class="stat-card" style="cursor: pointer" @click="router.push('/feed')">
         <div class="card-glow"></div>
         <div class="card-content">
@@ -62,13 +61,11 @@
           </div>
           <div class="stat-info">
             <span class="stat-label">{{ $t('dashboard.totalPosts') }}</span>
-            <span class="stat-value">{{ formatNumber(stats?.posts_24h) }}</span>
+            <span class="stat-value">{{ formatNumber(stats?.total_posts) }}</span>
           </div>
         </div>
-        <div class="stat-trend" :class="getGrowthClass(stats?.growth_rate)">
-          <el-icon v-if="stats?.growth_rate > 0"><ArrowUp /></el-icon>
-          <el-icon v-else-if="stats?.growth_rate < 0"><ArrowDown /></el-icon>
-          <span>{{ formatGrowthRate(stats?.growth_rate) }}</span>
+        <div class="stat-trend">
+          <span>{{ $t('dashboard.analyzed') }}: {{ formatNumber(stats?.analyzed_posts) }}</span>
         </div>
       </div>
     </div>
