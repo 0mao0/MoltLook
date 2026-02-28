@@ -1,0 +1,1 @@
+feat: unify docker-compose to use remote images with watchtower
